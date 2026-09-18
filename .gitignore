@@ -1,0 +1,23 @@
+node_modules/
+.pnpm-store/
+.turbo/
+dist/
+.next/
+out/
+coverage/
+test-results/
+playwright-report/
+blob-report/
+.expo/
+expo-env.d.ts
+*.tsbuildinfo
+.DS_Store
+
+# Secrets — never commit real keys. Copy .env.example to .env.local.
+# .env.development / .env.test are committed: they only hold the demo-mode flag.
+.env
+.env.local
+.env.*.local
+.env.production
+supabase/.branches/
+supabase/.temp/

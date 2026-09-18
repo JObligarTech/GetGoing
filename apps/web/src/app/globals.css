@@ -1,0 +1,82 @@
+@import "tailwindcss";
+@import "@voya/tokens/css";
+
+/* Map token variables onto Tailwind utilities (bg-canvas, text-muted, rounded-xl2 …). */
+@theme inline {
+  --color-canvas: var(--c-canvas);
+  --color-surface: var(--c-surface);
+  --color-surface-raised: var(--c-surface-raised);
+  --color-tint: var(--c-surface-tint);
+  --color-ink: var(--c-text);
+  --color-muted: var(--c-text-muted);
+  --color-faint: var(--c-text-faint);
+  --color-line: var(--c-border);
+  --color-line-strong: var(--c-border-strong);
+  --color-primary: var(--c-primary);
+  --color-on-primary: var(--c-on-primary);
+  --color-primary-hover: var(--c-primary-hover);
+  --color-primary-soft: var(--c-primary-soft);
+  --color-on-tint: var(--c-on-tint);
+  --color-button-ink: var(--c-ink);
+  --color-on-button-ink: var(--c-on-ink);
+  --color-premium: var(--c-premium);
+  --color-premium-text: var(--c-premium-text);
+  --color-premium-bg: var(--c-premium-bg);
+  --color-danger: var(--c-danger);
+  --color-map: var(--c-map-bg);
+  --font-sans: var(--font-manrope), var(--font-sans);
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: 12px;
+  --radius-xl: 14px;
+  --radius-2xl: 16px;
+  --radius-3xl: 18px;
+  --shadow-card: var(--c-shadow);
+  --ease-standard: var(--ease-standard);
+}
+
+/* Explicit backgrounds so the page is never transparent in either theme. */
+html { background: var(--c-canvas); }
+body {
+  background: var(--c-canvas);
+  color: var(--c-text);
+  font-family: var(--font-manrope), Manrope, system-ui, -apple-system, "Segoe UI", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  min-height: 100dvh;
+}
+
+/* Focus: always visible, 2px ring in the theme's focus colour, offset for contrast. */
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--c-focus);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* Skip link: visually hidden until focused. */
+.skip-link {
+  position: absolute;
+  left: 16px;
+  top: -100px;
+  z-index: 100;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: var(--c-ink);
+  color: var(--c-on-ink);
+  font-weight: 700;
+  transition: top var(--dur-fast);
+}
+.skip-link:focus { top: 16px; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
+}
+
+/* Utilities that the mockups rely on repeatedly. */
+.text-eyebrow { font-size: 12px; font-weight: 700; color: var(--c-text-muted); text-transform: uppercase; letter-spacing: 0.08em; }
+.card { background: var(--c-surface); border: 1px solid var(--c-border); border-radius: 14px; overflow: hidden; }
+.raised { background: var(--c-surface-raised); box-shadow: var(--c-shadow); color: var(--c-text); }
+
+/* MapLibre: hide its default attribution control; we render our own accessible one. */
+.maplibregl-ctrl-attrib { display: none; }
+.maplibregl-canvas:focus { outline: none; }

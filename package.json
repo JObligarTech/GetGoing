@@ -1,0 +1,23 @@
+{
+  "name": "voya",
+  "private": true,
+  "packageManager": "pnpm@10.33.0",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "dev": "turbo run dev",
+    "dev:web": "pnpm --filter @voya/web dev",
+    "dev:mobile": "pnpm --filter @voya/mobile start",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "test:e2e": "pnpm --filter @voya/web test:e2e",
+    "db:reset": "supabase db reset",
+    "db:types": "supabase gen types typescript --local > packages/core/src/db/database.types.ts",
+    "db:test": "supabase test db"
+  },
+  "devDependencies": {
+    "turbo": "^2.10.13",
+    "typescript": "^5.9.3"
+  }
+}
