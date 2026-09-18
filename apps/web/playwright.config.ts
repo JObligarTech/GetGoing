@@ -29,7 +29,7 @@ export default defineConfig({
     serviceWorkers: "block",
   },
   webServer: {
-    command: useDev ? `pnpm exec next dev -p ${PORT}` : `pnpm exec next build && pnpm exec next start -p ${PORT}`,
+    command: useDev ? `pnpm dev -- -p ${PORT}` : `pnpm build && pnpm exec next start -p ${PORT}`,
     url: `${baseURL}/api/health`,
     reuseExistingServer: !process.env.CI,
     timeout: 240_000,

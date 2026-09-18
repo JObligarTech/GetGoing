@@ -3,9 +3,10 @@ import AxeBuilder from "@axe-core/playwright";
 
 export const DEMO = { email: "joe@example.com", password: "VoyaDemo-2027!" };
 
-/** Block map tiles so runs are hermetic; the MapView renders its tint + sr-only pin list regardless. */
+/** Serve a blank tile for every OSM request so runs are hermetic while the map still loads, draws pins and route lines. */
+const BLANK_TILE = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==", "base64");
 async function blockTiles(page: Page) {
-  await page.route(/tile\.openstreetmap\.org/, (r) => r.abort());
+  await page.route(/tile\.openstreetmap\.org/, (r) => r.fulfill({ status: 200, contentType: "image/png", body: BLANK_TILE }));
 }
 
 export async function login(page: Page) {

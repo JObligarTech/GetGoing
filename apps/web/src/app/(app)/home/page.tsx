@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Bell, Compass, Landmark, Languages, Home as HomeIcon, Receipt } from "lucide-react";
 import {
-  categoriesForPlace, dayPins, formatClock, formatDateRange, formatTime, greeting, itemsForDay, localDate, placeById, placeColor,
+  boundsOf, categoriesForPlace, dayPins, formatClock, formatDateRange, formatTime, greeting, itemsForDay, localDate, placeById, placeColor,
   stayForDate, tripDayNumber, tripPhaseLabel,
 } from "@voya/core";
 import { Map } from "@/components/map/Map";
@@ -49,7 +49,10 @@ export default async function HomePage() {
   const stay = bundle ? stayForDate(bundle.stays, day) : null;
   const hotel = stay && bundle ? placeById(bundle, stay.place_id) : null;
   const pins = bundle ? dayPins(bundle, day) : [];
-  const center = hotel?.lat != null && hotel.lng != null ? { lat: hotel.lat - 0.007, lng: hotel.lng } : { lat: 35.6885, lng: 139.702 };
+  // Frame every pin of the day (hotel + places); fall back to the hotel, then the city.
+  const bounds = boundsOf(pins.length ? pins : hotel?.lat != null ? [{ lat: hotel.lat, lng: hotel.lng! }] : []);
+  const center = bounds?.center ?? { lat: 35.6885, lng: 139.702 };
+  const zoom = bounds ? Math.max(11.5, Math.min(14, Math.log2(360 / Math.max(bounds.span, 0.001)) - 1.6)) : 13.25;
   const phase = tripPhaseLabel(active, at, tz);
   const city = active.cities[0] ?? active.name;
   const dayLabel = formatDateRange(day, null);
@@ -73,7 +76,7 @@ export default async function HomePage() {
       {/* Map card — column 2, spanning every row on desktop */}
       <div className="px-4 md:px-7 lg:col-start-2 lg:row-span-5 lg:row-start-1 lg:h-full lg:px-0">
         <div className="relative h-[300px] overflow-hidden rounded-3xl border border-line bg-tint lg:h-full lg:rounded-none lg:border-0 lg:border-l">
-          <Map center={center} zoom={13.25} pins={pins} static label={`Map of ${city} with ${pins.length} pins: ${pins.map((p) => p.label).join(", ")}`} className="absolute inset-0" />
+          <Map center={center} zoom={zoom} pins={pins} static label={`Map of ${city} with ${pins.length} pins: ${pins.map((p) => p.label).join(", ")}`} className="absolute inset-0" />
           <div className="pointer-events-none absolute inset-x-3 top-3 flex items-start justify-between">
             <span className="raised flex h-[30px] items-center gap-2 rounded-sm px-2.5 text-[12px] font-bold"><Dot color="var(--c-primary)" size={8} />{phase}</span>
             <Clock city={city} tz={tz} homeTz={homeTz} initialNow={at.toISOString()} frozen={isDemo} />

@@ -33,7 +33,10 @@ test.describe("Navigate (round 2)", () => {
     const steps = page.getByRole("list", { name: "Directions steps" });
     await expect(steps.getByRole("listitem").first()).toContainText(/^Walk to/);
     await expect(steps.getByRole("listitem").last()).toContainText(/^Arrive/);
-    await expect(page.getByRole("img", { name: /Map of the transit route from Hotel Gracery Shinjuku to Afuri Ramen Harajuku/ })).toBeVisible();
+    const map = page.getByRole("img", { name: /Map of the transit route from Hotel Gracery Shinjuku to Afuri Ramen Harajuku/ });
+    await expect(map).toBeVisible();
+    // The route line is really on the map (MapLibre's worker tiled it), not just requested.
+    await expect(map).toHaveAttribute("data-route-state", "drawn", { timeout: 15_000 });
 
     // Arrow keys move through the modes and re-route (roving tabindex: only the checked radio is tabbable).
     await transit.focus();

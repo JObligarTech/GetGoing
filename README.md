@@ -30,6 +30,8 @@ This repo implements the [Claude Design](https://claude.ai/design) handoff (gree
 - **Storage** — `route_branches` / `route_branch_travelers` with RLS through trip membership, `route_stops.branch_id`, integrity triggers (branches can't cross routes, travelers can't cross trips), and a `save_route_tree` RPC that replaces a whole tree atomically as the caller (RLS still applies). Ids are minted by the app, never taken from the editor.
 - **Send my location** — reads the device position once, builds an OpenStreetMap link and hands it to the OS share sheet (clipboard on desktop). Nothing is stored or sent to Voya's backend; permission denial is explained in place.
 
+**Landing page** — `/` is a public marketing page in the same design system: the welcome screen's world-map hero with a floating live screenshot, animated scenes built from the app's own components (trip context flowing into tools, a route drawing itself per mode, groups splitting and meeting again), real product screenshots in device frames with scroll parallax, a scroll-scrubbed paragraph, roadmap and CTA. Every animation has a still, readable resting state and switches off under "Reduce motion"; scenes carry text equivalents for screen readers. Signed-in users land on Home instead. Screenshots come from `apps/web/scripts/marketing-shots.mjs` (real OpenStreetMap tiles when reachable, a generated basemap otherwise).
+
 Scheduled for the next rounds (routes exist as honest placeholders): Translate, Currency, Split, People, Atlas Premium Pass checkout, offline states.
 
 ## Run it
@@ -57,7 +59,7 @@ The service-role key is never used by either app; the web app refuses to start i
 ```bash
 pnpm test                          # tokens contrast (15) + core (62) + web components (9, axe) + mobile (17, RNTL)
 pnpm --filter @voya/core test:db   # migrations + seed + RLS scenarios (11) on a throwaway Postgres 16
-pnpm test:e2e                      # Playwright: 150 tests across iPhone/Android/iPad/desktop × light/dark
+pnpm test:e2e                      # Playwright: 174 tests across iPhone/Android/iPad/desktop × light/dark
 pnpm typecheck && pnpm lint
 ```
 
@@ -66,7 +68,7 @@ The e2e suite runs against a production build in demo mode. Every screen is chec
 ## Design → code decisions worth knowing
 
 - **Contrast:** the mockups' muted grey `#6B7570` measured 4.37:1 on the paper canvas; it's `#5F6964` here (4.5:1+). A dedicated `on-tint` colour keeps chips readable on tinted rows in dark mode. `packages/tokens` tests fail if a token drops below AA.
-- **Maps:** OpenStreetMap tiles via MapLibre (web) and MapLibre-in-WebView (mobile) — no API keys, matches the mockups' `voya-map`. Maps are `role="img"` with a text list of pins for assistive tech.
+- **Maps:** OpenStreetMap tiles via MapLibre (web) and MapLibre-in-WebView (mobile) — no API keys, matches the mockups' `voya-map`. Maps are `role="img"` with a text list of pins for assistive tech. MapLibre's worker is served from `public/maplibre` (copied by `scripts/sync-maplibre-worker.mjs` before dev/build) because the bundled copy doesn't start, and without it no route line renders; the map exposes `data-map-state` / `data-route-state` so tests wait for a drawn route rather than a timer.
 - **Dates:** 2027-03-15 is a Monday; the mockup's "Sat, Mar 15" was illustrative.
 - **Motion:** 3% press scale, 220 ms fades, 40 ms list stagger — all disabled under "Reduce motion".
 - **Demo mode:** in-memory data isolated per browser session; refused on production deployments (`VERCEL_ENV`/`VOYA_ENV=production`).
@@ -75,7 +77,7 @@ The e2e suite runs against a production build in demo mode. Every screen is chec
 ## Layout
 
 ```
-apps/web/src/app        routes: (auth)/* · (app)/{home,trips,plan,navigate/{route,day,tree},profile,…} · auth/actions.ts · legal/[doc]
+apps/web/src/app        routes: (marketing)/ landing · (auth)/* · (app)/{home,trips,plan,navigate/{route,day,tree},profile,…} · auth/actions.ts · legal/[doc]
 apps/web/src/components ui primitives, shell (tab bar / rail / sidebar), map, per-feature components
 apps/web/src/proxy.ts   CSP nonce, security headers, session refresh, route protection
 apps/mobile/app         expo-router: (auth)/* · (tabs)/* · plan · place/[id] · trips/[id] · navigate/{route,day,tree}

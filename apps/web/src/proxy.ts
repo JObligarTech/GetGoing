@@ -58,10 +58,6 @@ export async function proxy(request: NextRequest) {
     url.pathname = "/home";
     url.search = "";
     response = NextResponse.redirect(url);
-  } else if (path === "/") {
-    const url = request.nextUrl.clone();
-    url.pathname = "/welcome";
-    response = NextResponse.redirect(url);
   }
 
   response.headers.set("Content-Security-Policy", csp);

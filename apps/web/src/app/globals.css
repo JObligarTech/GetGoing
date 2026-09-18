@@ -25,6 +25,7 @@
   --color-danger: var(--c-danger);
   --color-map: var(--c-map-bg);
   --font-sans: var(--font-manrope), var(--font-sans);
+  --font-serif: var(--font-newsreader), Georgia, "Times New Roman", serif;
   --radius-sm: 8px;
   --radius-md: 10px;
   --radius-lg: 12px;
@@ -80,3 +81,9 @@ body {
 /* MapLibre: hide its default attribution control; we render our own accessible one. */
 .maplibregl-ctrl-attrib { display: none; }
 .maplibregl-canvas:focus { outline: none; }
+
+/* Landing page marquee: a slow, seamless strip; stops under reduced motion. */
+.marquee { overflow: hidden; }
+.marquee-track { display: flex; width: max-content; animation: voya-marquee 60s linear infinite; }
+@keyframes voya-marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+@media (prefers-reduced-motion: reduce) { .marquee-track { animation: none; } }

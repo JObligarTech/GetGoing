@@ -83,7 +83,7 @@ export default async function RoutePage({ searchParams }: { searchParams: Promis
   );
 
   return (
-    <div className="lg:grid lg:h-dvh lg:grid-cols-[460px_1fr] lg:overflow-hidden">
+    <div className="flex flex-col lg:grid lg:h-dvh lg:grid-cols-[460px_1fr] lg:overflow-hidden">
       {/* Left column (desktop) / bottom sheet (phone) */}
       <FadeIn className="order-2 flex flex-col gap-3.5 px-4 pt-3.5 pb-6 md:px-7 lg:order-1 lg:overflow-y-auto lg:pt-7">
         <header className="flex items-center gap-2">

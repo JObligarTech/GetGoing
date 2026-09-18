@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
-import { Map as MLMap, Marker, type GeoJSONSource, type StyleSpecification } from "maplibre-gl";
+import { Map as MLMap, Marker, setWorkerUrl, type GeoJSONSource, type StyleSpecification } from "maplibre-gl";
 import type { FeatureCollection, LineString } from "geojson";
 import "maplibre-gl/dist/maplibre-gl.css";
 import type { LatLng, MapPin } from "@voya/core";
@@ -55,6 +55,9 @@ function subscribeDocTheme(cb: () => void) {
 
 const SAFE_HEX = /^#[0-9a-fA-F]{6}$/;
 
+// The worker is served from /public (see scripts/sync-maplibre-worker.mjs); the bundled copy doesn't start.
+if (typeof window !== "undefined") setWorkerUrl("/maplibre/maplibre-gl-worker.mjs");
+
 function pinElement(raw: MapPin, dark: boolean): HTMLElement {
   // Colours come from the DB (checked there too); never let anything else reach cssText.
   const pin = { ...raw, color: SAFE_HEX.test(raw.color) ? raw.color : "#2F5D3A" };
@@ -86,6 +89,9 @@ export function MapView({ center, zoom = 13, pins = [], static: isStatic, dark, 
   const isDark = dark ?? docDark;
   const [failed, setFailed] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  const wrapRef = useRef<HTMLDivElement>(null);
+  // Route-drawn state is written straight to the wrapper (data-route-state) for tests and screenshot tooling.
+  const setRouteState = (v: "none" | "pending" | "drawn") => { if (wrapRef.current) wrapRef.current.dataset.routeState = v; };
 
   useEffect(() => {
     if (!ref.current || mapRef.current) return;
@@ -105,6 +111,8 @@ export function MapView({ center, zoom = 13, pins = [], static: isStatic, dark, 
     // MapLibre makes its canvas tabbable; keyboard panning is off, so it would be a dead tab stop.
     map.getCanvas().tabIndex = -1;
     map.on("load", () => { setFailed(false); setLoaded(true); });
+    // Opt-in hook for screenshot tooling and debugging (NEXT_PUBLIC_VOYA_MAP_DEBUG=1 at build time).
+    if (process.env.NEXT_PUBLIC_VOYA_MAP_DEBUG === "1") { const w = window as unknown as { __voyaMaps?: MLMap[] }; w.__voyaMaps = [...(w.__voyaMaps ?? []), map]; }
     mapRef.current = map;
     return () => { map.remove(); mapRef.current = null; };
     // Initial-only: later changes are applied imperatively below.
@@ -147,7 +155,10 @@ export function MapView({ center, zoom = 13, pins = [], static: isStatic, dark, 
     if (all.length > 1) {
       const lats = all.map((p) => p.lat), lngs = all.map((p) => p.lng);
       map.fitBounds([[Math.min(...lngs), Math.min(...lats)], [Math.max(...lngs), Math.max(...lats)]], { padding: 56, duration: 0, maxZoom: 15 });
-    }
+      // "idle" means the GeoJSON worker has tiled the line and it is on screen (tests and screenshots wait for this).
+      setRouteState("pending");
+      map.once("idle", () => setRouteState("drawn"));
+    } else setRouteState("none");
   }, [path, paths, loaded, isDark]);
 
   const tint = isDark
@@ -155,8 +166,8 @@ export function MapView({ center, zoom = 13, pins = [], static: isStatic, dark, 
     : "saturate(.55) contrast(.95)";
 
   return (
-    <div className={cx("relative h-full w-full overflow-hidden bg-map", className)} role="img" aria-label={label}>
-      <div ref={ref} className="absolute inset-0 [&_.maplibregl-canvas-container]:h-full" style={{ filter: tint }} />
+    <div ref={wrapRef} className={cx("relative h-full w-full overflow-hidden bg-map", className)} role="img" aria-label={label} data-map-state={failed ? "failed" : loaded ? "loaded" : "loading"} data-route-state="none">
+      <div ref={ref} className="h-full w-full [&_.maplibregl-canvas-container]:h-full" style={{ filter: tint }} />
       {/* Markers live inside the filtered container; undo the filter on them so colours stay true. */}
       <style>{`.maplibregl-marker{filter:${isDark ? "invert(1) hue-rotate(180deg) brightness(1.18) saturate(2.5)" : "saturate(1.82) contrast(1.05)"}}`}</style>
       {failed && !isStatic && (

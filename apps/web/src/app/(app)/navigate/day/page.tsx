@@ -74,7 +74,7 @@ export default async function DayRoutePage({ searchParams }: { searchParams: Pro
   const title = saved?.name ?? `Day ${dayNo} route`;
 
   return (
-    <div className="lg:grid lg:h-dvh lg:grid-cols-[460px_1fr] lg:overflow-hidden">
+    <div className="flex flex-col lg:grid lg:h-dvh lg:grid-cols-[460px_1fr] lg:overflow-hidden">
       <FadeIn className="order-2 flex flex-col gap-3.5 px-4 pt-3.5 pb-6 md:px-7 lg:order-1 lg:overflow-y-auto lg:pt-7">
         <header className="flex items-center gap-2">
           <Button href="/navigate" variant="secondary" size="sm" aria-label="Back to Navigate" icon={<ArrowLeft size={18} />}><span className="sr-only">Back</span></Button>

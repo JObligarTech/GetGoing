@@ -79,9 +79,9 @@ export const mockRouting: RoutingProvider = {
       const rideSec = Math.round(ride / 9);
       const stops = Math.max(1, Math.round(ride / 1100));
       steps.push(
-        { kind: "walk", instruction: "Walk to the station", detail: `${walkA} m`, distanceM: walkA, durationSec: Math.round(walkA / SPEED.walk) },
+        { kind: "walk", instruction: "Walk to the station", distanceM: walkA, durationSec: Math.round(walkA / SPEED.walk) },
         { kind: "transit", instruction: `Train · ${stops} ${stops === 1 ? "stop" : "stops"}`, detail: "Check the platform on arrival", distanceM: ride, durationSec: rideSec },
-        { kind: "walk", instruction: "Walk to your destination", detail: `${walkB} m`, distanceM: walkB, durationSec: Math.round(walkB / SPEED.walk) },
+        { kind: "walk", instruction: "Walk to your destination", distanceM: walkB, durationSec: Math.round(walkB / SPEED.walk) },
         { kind: "arrive", instruction: "Arrive", distanceM: 0, durationSec: 0 },
       );
     } else {
@@ -89,7 +89,7 @@ export const mockRouting: RoutingProvider = {
       const each = Math.round(distanceM / parts);
       const verbs = ["Head out", "Continue straight", "Turn left", "Turn right", "Keep going"];
       for (let i = 0; i < parts; i++) {
-        steps.push({ kind: i === 0 ? "walk" : "turn", instruction: verbs[i % verbs.length]!, detail: `${each} m`, distanceM: each, durationSec: Math.round(each / SPEED[mode]) });
+        steps.push({ kind: i === 0 ? "walk" : "turn", instruction: verbs[i % verbs.length]!, distanceM: each, durationSec: Math.round(each / SPEED[mode]) });
       }
       steps.push({ kind: "arrive", instruction: "Arrive", distanceM: 0, durationSec: 0 });
     }

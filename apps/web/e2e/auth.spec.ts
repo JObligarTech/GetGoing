@@ -2,7 +2,7 @@ import { expect, expectAccessible, login, test } from "./fixtures";
 
 test.describe("auth", () => {
   test("welcome → log in → home, with security headers", async ({ page }) => {
-    const res = await page.goto("/");
+    const res = await page.goto("/welcome");
     await expect(page).toHaveURL(/\/welcome$/);
     const h = res!.headers();
     expect(h["content-security-policy"]).toMatch(/script-src 'self' 'nonce-/);

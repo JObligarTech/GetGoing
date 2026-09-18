@@ -27,6 +27,7 @@ stop() {
 start() {
   cd "$here"
   port_free || { echo "port $port is busy — run '$0 stop $port' first"; return 1; }
+  node scripts/sync-maplibre-worker.mjs >/dev/null
   [[ "$nobuild" == "--no-build" ]] || pnpm exec next build >"$log.build" 2>&1 || { echo "build failed:"; tail -30 "$log.build"; return 1; }
   setsid nohup pnpm exec next start -p "$port" >"$log" 2>&1 < /dev/null &
   for _ in $(seq 1 40); do
