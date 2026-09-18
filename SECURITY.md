@@ -34,6 +34,10 @@ Verified by `supabase/tests/rls.test.sql` (pgTAP) and `packages/core/db-tests/rl
 - `Profile → Download my data` (`export_my_data` RPC, RLS-scoped) and `Delete my account` (`delete_my_account` RPC, cascades, two-step dialog).
 - Legal pages: Terms, Privacy, Refunds, Cookies (essential-only, so no consent banner is required), Licences.
 
+## Dependency audit (as of this build)
+
+`pnpm audit --prod` reports one moderate advisory: `uuid < 11.1.1` reached only through `expo → @expo/config-plugins → xcode`, i.e. the native-project generator used at build time. It is not part of the shipped JavaScript bundle, and forcing a major-version override there risks breaking `expo prebuild`; it clears when Expo updates the plugin chain. `decode-uri-component` (via `expo-router → query-string`) is pinned to a patched version with a pnpm override.
+
 ## Reporting
 
 Open a private security advisory on the repository or email the maintainers listed in `package.json`. Please don't file public issues for vulnerabilities.

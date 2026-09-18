@@ -48,7 +48,11 @@ function subscribeDocTheme(cb: () => void) {
   return () => { mq.removeEventListener("change", cb); mo.disconnect(); };
 }
 
-function pinElement(pin: MapPin, dark: boolean): HTMLElement {
+const SAFE_HEX = /^#[0-9a-fA-F]{6}$/;
+
+function pinElement(raw: MapPin, dark: boolean): HTMLElement {
+  // Colours come from the DB (checked there too); never let anything else reach cssText.
+  const pin = { ...raw, color: SAFE_HEX.test(raw.color) ? raw.color : "#2F5D3A" };
   const el = document.createElement("div");
   el.setAttribute("aria-hidden", "true");
   // Pins are rendered above the tinted basemap, so we counter the dark-mode invert.
