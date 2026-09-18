@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import {
-  DEMO_NOW, demoBundle, demoTrips, listTrips, loadTripBundle, pickActiveTrip, routeSchema, type RouteInput, type TripBundle, type TripListItem,
+  DEMO_NOW, demoBundle, demoTrips, listTrips, loadTripBundle, pickActiveTrip, routeSchema, treeSchema, type RouteInput, type RouteTree, type TripBundle, type TripListItem,
 } from "@voya/core";
 import { getSupabase, isDemo, prefs } from "./supabase";
 import { useSession } from "./session";
@@ -15,6 +15,8 @@ interface DataState {
   assignPlaceToSlot(itemId: string, placeId: string): Promise<void>;
   /** Save a named multi-stop route on the active trip; resolves the new route id or an error message. */
   saveRoute(input: Omit<RouteInput, "tripId">): Promise<{ id: string } | { error: string }>;
+  /** Create or replace a navigation tree on the active trip. */
+  saveTree(tree: RouteTree): Promise<{ id: string } | { error: string }>;
   refresh(): Promise<void>;
 }
 
@@ -81,7 +83,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       if (!b) return { error: "No active trip." };
       const ts = new Date().toISOString();
       b.routes.push({ id, trip_id: tripId, name, day, mode, notes: null, created_by: user.id, created_at: ts, updated_at: ts });
-      stops.forEach((s, i) => b.routeStops.push({ id: crypto.randomUUID(), route_id: id, trip_id: tripId, place_id: s.placeId, sort_order: i, planned_time: s.plannedTime, dwell_min: null, mode: null, parent_stop_id: null, created_at: ts }));
+      stops.forEach((s, i) => b.routeStops.push({ id: crypto.randomUUID(), route_id: id, trip_id: tripId, place_id: s.placeId, sort_order: i, planned_time: s.plannedTime, dwell_min: null, mode: null, branch_id: null, created_at: ts }));
     } else {
       const db = await getSupabase();
       const { error } = await db.from("routes").insert({ id, trip_id: tripId, name, day, mode, created_by: user.id });
@@ -93,8 +95,48 @@ export function DataProvider({ children }: { children: ReactNode }) {
     return { id };
   }, [bundle, user, demo, refresh]);
 
+  const saveTree = useCallback<DataState["saveTree"]>(async (tree) => {
+    if (!bundle || !user) return { error: "No active trip." };
+    const parsed = treeSchema.safeParse({ ...tree, tripId: bundle.trip.id });
+    if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Check the route." };
+    const t = parsed.data;
+    if (!t.stops.every((s) => bundle.places.some((p) => p.id === s.placeId)) || !t.branches.every((b) => b.travelerIds.every((x) => bundle.travelers.some((tr) => tr.id === x)))) return { error: "One of the stops or travelers isn't on this trip." };
+    // Row ids are minted here, never reused from the editor.
+    const stopIds = new Map(t.stops.map((s) => [s.id, crypto.randomUUID()]));
+    const branchIds = new Map(t.branches.map((b) => [b.id, crypto.randomUUID()]));
+    const stops = t.stops.map((s) => ({ ...s, id: stopIds.get(s.id)!, branchId: s.branchId ? branchIds.get(s.branchId)! : null }));
+    const branches = t.branches.map((b) => ({ ...b, id: branchIds.get(b.id)!, splitAfterStopId: stopIds.get(b.splitAfterStopId)! }));
+    const id = t.routeId ?? crypto.randomUUID();
+    if (isDemo) {
+      const b = demo.bundles.get(t.tripId);
+      if (!b || (t.routeId && !b.routes.some((r) => r.id === t.routeId))) return { error: "Route not found." };
+      const ts = new Date().toISOString();
+      const old = new Set(b.routeBranches.filter((x) => x.route_id === id).map((x) => x.id));
+      b.routeStops = b.routeStops.filter((x) => x.route_id !== id);
+      b.routeBranches = b.routeBranches.filter((x) => x.route_id !== id);
+      b.routeBranchTravelers = b.routeBranchTravelers.filter((x) => !old.has(x.branch_id));
+      if (t.routeId) b.routes = b.routes.map((r) => (r.id === id ? { ...r, name: t.name, day: t.day, mode: t.mode, updated_at: ts } : r));
+      else b.routes.push({ id, trip_id: t.tripId, name: t.name, day: t.day, mode: t.mode, notes: null, created_by: user.id, created_at: ts, updated_at: ts });
+      for (const s of stops) b.routeStops.push({ id: s.id, route_id: id, trip_id: t.tripId, place_id: s.placeId, sort_order: s.sortOrder, planned_time: s.plannedTime, dwell_min: s.dwellMin, mode: s.mode, branch_id: s.branchId, created_at: ts });
+      for (const br of branches) {
+        b.routeBranches.push({ id: br.id, route_id: id, trip_id: t.tripId, name: br.name, color: br.color, sort_order: br.sortOrder, split_after_stop_id: br.splitAfterStopId, merge_mode: br.mergeMode, created_at: ts });
+        for (const tr of br.travelerIds) b.routeBranchTravelers.push({ branch_id: br.id, traveler_id: tr, trip_id: t.tripId });
+      }
+    } else {
+      const db = await getSupabase();
+      const { error } = await db.rpc("save_route_tree", {
+        p_route_id: t.routeId, p_trip_id: t.tripId, p_name: t.name, p_day: t.day, p_mode: t.mode,
+        p_stops: stops.map((s) => ({ id: s.id, place_id: s.placeId, branch_id: s.branchId, sort_order: s.sortOrder, planned_time: s.plannedTime, dwell_min: s.dwellMin, mode: s.mode })),
+        p_branches: branches.map((b) => ({ id: b.id, name: b.name, color: b.color, sort_order: b.sortOrder, split_after_stop_id: b.splitAfterStopId, merge_mode: b.mergeMode, traveler_ids: b.travelerIds })),
+      });
+      if (error) return { error: "Couldn't save the route." };
+    }
+    await refresh();
+    return { id };
+  }, [bundle, user, demo, refresh]);
+
   const active = trips.find((t) => t.id === activeId) ?? null;
-  const value = useMemo<DataState>(() => ({ now, trips, active, bundle, loading, setActive, assignPlaceToSlot, saveRoute, refresh }), [now, trips, active, bundle, loading, setActive, assignPlaceToSlot, saveRoute, refresh]);
+  const value = useMemo<DataState>(() => ({ now, trips, active, bundle, loading, setActive, assignPlaceToSlot, saveRoute, saveTree, refresh }), [now, trips, active, bundle, loading, setActive, assignPlaceToSlot, saveRoute, saveTree, refresh]);
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 

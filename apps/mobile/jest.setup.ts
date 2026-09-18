@@ -29,6 +29,11 @@ jest.mock("expo-local-authentication", () => ({
   authenticateAsync: jest.fn(async () => ({ success: true })),
   AuthenticationType: { FINGERPRINT: 1, FACIAL_RECOGNITION: 2 },
 }));
+jest.mock("expo-location", () => ({
+  requestForegroundPermissionsAsync: jest.fn(async () => ({ status: "granted" })),
+  getCurrentPositionAsync: jest.fn(async () => ({ coords: { latitude: 35.6951, longitude: 139.7006, accuracy: 5 } })),
+  Accuracy: { High: 4 },
+}));
 jest.mock("react-native-webview", () => {
   const React = require("react");
   const { View } = require("react-native");

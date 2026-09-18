@@ -8,28 +8,61 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "backgroundColor": "#F6F5F1",
-    "splash": { "backgroundColor": "#2F5D3A", "resizeMode": "contain" },
+    "splash": {
+      "backgroundColor": "#2F5D3A",
+      "resizeMode": "contain"
+    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "app.voya.mobile",
       "infoPlist": {
         "NSFaceIDUsageDescription": "Voya uses Face ID to let you back in without typing your password.",
-        "NSLocationWhenInUseUsageDescription": "Voya uses your location to navigate to your saved places and hotel.",
+        "NSLocationWhenInUseUsageDescription": "Voya reads your location once when you choose to share it with your travelers. It is never stored.",
         "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
       "package": "app.voya.mobile",
-      "adaptiveIcon": { "backgroundColor": "#2F5D3A" },
-      "permissions": ["USE_BIOMETRIC", "USE_FINGERPRINT", "ACCESS_FINE_LOCATION"]
+      "adaptiveIcon": {
+        "backgroundColor": "#2F5D3A"
+      },
+      "permissions": [
+        "USE_BIOMETRIC",
+        "USE_FINGERPRINT",
+        "ACCESS_FINE_LOCATION"
+      ]
     },
-    "web": { "bundler": "metro", "output": "single" },
+    "web": {
+      "bundler": "metro",
+      "output": "single"
+    },
     "plugins": [
       "expo-router",
       "expo-secure-store",
-      ["expo-local-authentication", { "faceIDPermission": "Voya uses Face ID to let you back in without typing your password." }],
-      ["expo-splash-screen", { "backgroundColor": "#2F5D3A", "dark": { "backgroundColor": "#121614" } }]
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Voya uses Face ID to let you back in without typing your password."
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#2F5D3A",
+          "dark": {
+            "backgroundColor": "#121614"
+          }
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Voya reads your location once when you choose to share it with your travelers. It is never stored."
+        }
+      ]
     ],
-    "experiments": { "typedRoutes": true }
+    "experiments": {
+      "typedRoutes": true
+    }
   }
 }

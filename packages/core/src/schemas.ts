@@ -121,6 +121,35 @@ export const routeSchema = z.object({
 });
 export type RouteInput = z.infer<typeof routeSchema>;
 
+const shortId = z.string().min(1).max(64);
+const mode = z.enum(["walk", "transit", "drive", "cycle"]);
+/** A whole navigation tree, as sent by the editor. Ids are re-minted server-side before storage. */
+export const treeSchema = z.object({
+  routeId: z.uuid().nullable().default(null),
+  tripId: z.uuid(),
+  name: text(120),
+  day: dateStr.nullable().default(null),
+  mode: mode.default("transit"),
+  stops: z.array(z.object({
+    id: shortId, placeId: z.uuid(), branchId: shortId.nullable().default(null), sortOrder: z.number().int().min(0).max(1000),
+    plannedTime: timeStr.nullable().default(null), dwellMin: z.number().int().min(0).max(1440).nullable().default(null), mode: mode.nullable().default(null),
+  })).min(2).max(60),
+  branches: z.array(z.object({
+    id: shortId, name: text(40), color: hex, sortOrder: z.number().int().min(0).max(100), splitAfterStopId: shortId,
+    mergeMode: mode.nullable().default(null), travelerIds: z.array(shortId).max(50),
+  })).max(12),
+}).superRefine((t, ctx) => {
+  const stopIds = new Set(t.stops.map((s) => s.id)), branchIds = new Set(t.branches.map((b) => b.id));
+  if (stopIds.size !== t.stops.length || branchIds.size !== t.branches.length) ctx.addIssue({ code: "custom", message: "Duplicate ids", path: ["stops"] });
+  for (const s of t.stops) if (s.branchId && !branchIds.has(s.branchId)) ctx.addIssue({ code: "custom", message: "Stop refers to a missing branch", path: ["stops"] });
+  for (const b of t.branches) {
+    const split = t.stops.find((s) => s.id === b.splitAfterStopId);
+    if (!split || split.branchId !== null) ctx.addIssue({ code: "custom", message: "Branches must split from a trunk stop", path: ["branches"] });
+  }
+  if (!t.stops.some((s) => s.branchId === null)) ctx.addIssue({ code: "custom", message: "A route needs at least one shared stop", path: ["stops"] });
+});
+export type TreeInput = z.infer<typeof treeSchema>;
+
 export const profileSchema = z.object({
   displayName: text(80),
   homeCurrency: iso3,

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
-import { Home as HomeIcon, MapPinned, Route, Send, Utensils } from "lucide-react";
-import { formatDateRange, localDate, navShortcuts, placeById, pluralize, tripDayNumber, MODE_LABEL } from "@voya/core";
+import { GitFork, Home as HomeIcon, MapPinned, Route, Utensils } from "lucide-react";
+import { formatDateRange, isTree, localDate, navShortcuts, placeById, pluralize, tripDayNumber, MODE_LABEL } from "@voya/core";
+import { SendLocation } from "@/components/navigate/SendLocation";
 import { Page } from "@/components/shell/Page";
 import { Button } from "@/components/ui/Button";
 import { FadeIn } from "@/components/ui/Motion";
@@ -38,7 +39,8 @@ export default async function NavigatePage() {
             <ListRow key={s.key} href={`/navigate/route?to=${s.place.id}`} leading={<IconCoin>{icon[s.key]}</IconCoin>} title={s.label} subtitle={s.detail} chevron ariaLabel={`${s.label}: ${s.place.name}`} />
           ))}
           <ListRow href={`/navigate/day?day=${day}`} leading={<IconCoin><Route size={20} /></IconCoin>} title="Navigate the day" subtitle={`Day ${dayNo} · hotel → ${pluralize(bundle.itinerary.filter((i) => i.day === day && i.place_id).length, "stop")} → hotel`} chevron />
-          <ListRow leading={<IconCoin><Send size={20} /></IconCoin>} title="Send my location" subtitle={`to ${bundle.travelers.filter((t) => t.user_id !== user.id).map((t) => t.name).join(", ") || "your travelers"}`} trailing={<Chip tone="plain">Next round</Chip>} />
+          <ListRow href={`/navigate/tree?day=${day}`} leading={<IconCoin><GitFork size={20} /></IconCoin>} title="Plan a tree route" subtitle="Groups split, compare, meet again" chevron />
+          <SendLocation travelers={bundle.travelers.filter((t) => t.user_id !== user.id).map((t) => ({ id: t.id, name: t.name, color: t.color }))} senderName={user.profile.display_name.split(" ")[0] ?? "I"} tz={tz} />
         </Card>
 
         <SectionHeader title="Saved routes" />
@@ -47,13 +49,15 @@ export default async function NavigatePage() {
             {bundle.routes.map((r) => {
               const stops = bundle.routeStops.filter((s) => s.route_id === r.id);
               const first = placeById(bundle, stops[0]?.place_id ?? null), last = placeById(bundle, stops.at(-1)?.place_id ?? null);
+              const tree = isTree(bundle, r.id);
+              const groups = bundle.routeBranches.filter((b) => b.route_id === r.id).length;
               return (
                 <ListRow
                   key={r.id}
-                  href={`/navigate/day?route=${r.id}`}
+                  href={tree ? `/navigate/tree?route=${r.id}` : `/navigate/day?route=${r.id}`}
                   leading={<Tile name={r.name} size={44} radius={12} invert />}
                   title={r.name}
-                  subtitle={`${pluralize(stops.length, "stop")} · ${MODE_LABEL[r.mode]}${first && last && first.id !== last.id ? ` · ${first.name.split(" ")[0]} → ${last.name.split(" ")[0]}` : ""}`}
+                  subtitle={tree ? `Tree route · ${pluralize(groups, "group")} · ${pluralize(stops.length, "stop")}` : `${pluralize(stops.length, "stop")} · ${MODE_LABEL[r.mode]}${first && last && first.id !== last.id ? ` · ${first.name.split(" ")[0]} → ${last.name.split(" ")[0]}` : ""}`}
                   trailing={r.day ? <Chip tone="plain">{formatDateRange(r.day, null)}</Chip> : undefined}
                   chevron
                 />

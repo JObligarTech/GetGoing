@@ -102,6 +102,7 @@ export default async function DayRoutePage({ searchParams }: { searchParams: Pro
           saveAction={saveRoute}
           defaultName={saved?.name ?? `Day ${dayNo} · ${stops[1]?.place.name.split(" ")[0] ?? "route"}`}
         />
+        {!saved && <Button href={`/navigate/tree?day=${day}`} variant="secondary" full>Split into groups (tree route)</Button>}
         <p className="text-[12px] text-muted">{plan.legs.some((l) => l.route.source === "mock") ? "Times are estimates; live transit arrives with a routing provider." : ""}</p>
       </FadeIn>
 

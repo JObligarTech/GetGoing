@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { Map as MLMap, Marker, type GeoJSONSource, type StyleSpecification } from "maplibre-gl";
-import type { Feature, LineString } from "geojson";
+import type { FeatureCollection, LineString } from "geojson";
 import "maplibre-gl/dist/maplibre-gl.css";
 import type { LatLng, MapPin } from "@voya/core";
 import { cx } from "@/lib/utils";
@@ -20,6 +20,8 @@ export interface MapViewProps {
   onPinClick?: (pin: MapPin) => void;
   /** Route polyline (lat/lng points) drawn in the primary colour. */
   path?: LatLng[];
+  /** Several polylines with their own colours (tree lanes). Takes precedence over `path`. */
+  paths?: { points: LatLng[]; color: string }[];
 }
 
 const OSM_STYLE: StyleSpecification = {
@@ -76,7 +78,7 @@ function pinElement(raw: MapPin, dark: boolean): HTMLElement {
  * desaturated light basemap, inverted/hue-rotated dark basemap, pill markers.
  * Screen readers get a text summary of the pins instead of the canvas.
  */
-export function MapView({ center, zoom = 13, pins = [], static: isStatic, dark, className, label, onPinClick, path }: MapViewProps) {
+export function MapView({ center, zoom = 13, pins = [], static: isStatic, dark, className, label, onPinClick, path, paths }: MapViewProps) {
   const ref = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MLMap | null>(null);
   const markersRef = useRef<Marker[]>([]);
@@ -124,24 +126,29 @@ export function MapView({ center, zoom = 13, pins = [], static: isStatic, dark, 
     });
   }, [pins, isDark, onPinClick]);
 
-  // Route line: one GeoJSON source, replaced on change. Colour counters the basemap tint like the markers do.
+  // Route lines: one GeoJSON source of coloured LineStrings, replaced on change. Colours counter the basemap tint like the markers do.
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !loaded) return;
     const id = "voya-route";
-    const data: Feature<LineString> = { type: "Feature", properties: {}, geometry: { type: "LineString", coordinates: (path ?? []).map((p) => [p.lng, p.lat]) } };
+    const lines = paths ?? (path ? [{ points: path, color: "#2F5D3A" }] : []);
+    const data: FeatureCollection<LineString> = {
+      type: "FeatureCollection",
+      features: lines.map((l) => ({ type: "Feature", properties: { color: SAFE_HEX.test(l.color) ? l.color : "#2F5D3A" }, geometry: { type: "LineString", coordinates: l.points.map((p) => [p.lng, p.lat]) } })),
+    };
     const src = map.getSource(id) as GeoJSONSource | undefined;
     if (src) src.setData(data);
     else {
       map.addSource(id, { type: "geojson", data });
       map.addLayer({ id: `${id}-casing`, type: "line", source: id, paint: { "line-color": isDark ? "#0F1A13" : "#ffffff", "line-width": 9, "line-opacity": 0.9 }, layout: { "line-cap": "round", "line-join": "round" } });
-      map.addLayer({ id, type: "line", source: id, paint: { "line-color": isDark ? "#7A5F1F" : "#2F5D3A", "line-width": 5 }, layout: { "line-cap": "round", "line-join": "round" } });
+      map.addLayer({ id, type: "line", source: id, paint: { "line-color": ["get", "color"], "line-width": 5 }, layout: { "line-cap": "round", "line-join": "round" } });
     }
-    if (path && path.length > 1) {
-      const lats = path.map((p) => p.lat), lngs = path.map((p) => p.lng);
+    const all = lines.flatMap((l) => l.points);
+    if (all.length > 1) {
+      const lats = all.map((p) => p.lat), lngs = all.map((p) => p.lng);
       map.fitBounds([[Math.min(...lngs), Math.min(...lats)], [Math.max(...lngs), Math.max(...lats)]], { padding: 56, duration: 0, maxZoom: 15 });
     }
-  }, [path, loaded, isDark]);
+  }, [path, paths, loaded, isDark]);
 
   const tint = isDark
     ? "invert(1) hue-rotate(180deg) brightness(.85) saturate(.4)"

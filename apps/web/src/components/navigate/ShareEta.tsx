@@ -4,7 +4,7 @@ import { Share2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 
 /** Web Share API where available (phones), otherwise copies the text and confirms via a live region. */
-export function ShareEta({ text }: { text: string }) {
+export function ShareEta({ text, label = "Share ETA", variant = "ink" }: { text: string; label?: string; variant?: "ink" | "secondary" }) {
   const [done, setDone] = useState<string | null>(null);
   const share = async () => {
     try {
@@ -21,7 +21,7 @@ export function ShareEta({ text }: { text: string }) {
   };
   return (
     <>
-      <Button variant="ink" full icon={<Share2 size={18} />} onClick={share}>Share ETA</Button>
+      <Button variant={variant} full icon={<Share2 size={18} />} onClick={share}>{label}</Button>
       <span role="status" className="sr-only">{done ?? ""}</span>
     </>
   );

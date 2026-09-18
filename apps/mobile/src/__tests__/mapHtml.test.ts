@@ -17,10 +17,14 @@ describe("TripMap HTML", () => {
   });
 
   it("draws a route line only when there is a path, with sanitised coordinates", () => {
-    expect(buildHtml({ ...base, pins: [] })).toContain("var line=[];");
+    expect(buildHtml({ ...base, pins: [] })).toContain("var lines=[];");
     const html = buildHtml({ ...base, pins: [], path: [{ lat: 35.6, lng: 139.7 }, { lat: NaN, lng: 139.71 }] });
-    expect(html).toContain("var line=[[139.7,35.6],[139.71,0]];");
+    expect(html).toContain('var lines=[{"c":"#2F5D3A","p":[[139.7,35.6],[139.71,0]]}];');
     expect(html).toContain("addLayer({id:'rl'");
+    // Several coloured lanes; colours are validated like pin colours.
+    const multi = buildHtml({ ...base, pins: [], paths: [{ color: "#F2B233", points: [{ lat: 1, lng: 2 }, { lat: 3, lng: 4 }] }, { color: "url(x)", points: [{ lat: 1, lng: 2 }, { lat: 5, lng: 6 }] }] });
+    expect(multi).toContain('"c":"#F2B233"');
+    expect(multi).toContain('"c":"#2F5D3A"');
   });
 
   it("locks the WebView down with a CSP", () => {

@@ -134,6 +134,52 @@ describe.skipIf(!url)("row level security", () => {
     await db.query(`update public.trip_members set role='editor' where trip_id=$1 and user_id=$2`, [TRIP, MALLORY]);
   });
 
+  it("seed: the demo tree has two branches with two travelers each", async () => {
+    await superuser();
+    expect(await count(`select count(*)::int n from public.route_branches where route_id='55555555-5555-4555-8555-555555555553'`)).toBe(2);
+    expect(await count(`select count(*)::int n from public.route_branch_travelers where trip_id='22222222-2222-4222-8222-222222222221'`)).toBe(4);
+  });
+
+  it("save_route_tree writes a whole tree atomically under RLS; branches can't cross routes or trips", async () => {
+    await as(ALICE);
+    const { rows: places } = await db.query(`select id from public.places where trip_id=$1 order by name`, [TRIP]);
+    const { rows: [trav] } = await db.query(`select id from public.travelers where trip_id=$1 limit 1`, [TRIP]);
+    const S1 = "66666666-6666-4666-8666-666666666601", S2 = "66666666-6666-4666-8666-666666666602", S3 = "66666666-6666-4666-8666-666666666603", B1 = "77777777-7777-4777-8777-777777777701";
+    const stops = [
+      { id: S1, place_id: places[0].id, sort_order: 0, planned_time: "14:30" },
+      { id: S2, place_id: places[0].id, sort_order: 1, planned_time: "19:30" },
+      { id: S3, place_id: places[0].id, sort_order: 0, branch_id: B1, dwell_min: 60, mode: "walk" },
+    ];
+    const branches = [{ id: B1, name: "Group A", sort_order: 0, split_after_stop_id: S1, merge_mode: "transit", traveler_ids: [trav.id] }];
+    const { rows: [{ save_route_tree: routeId }] } = await db.query(`select public.save_route_tree(null, $1, 'Tree', '2027-03-15', 'transit', $2::jsonb, $3::jsonb)`, [TRIP, JSON.stringify(stops), JSON.stringify(branches)]);
+    expect(await count(`select count(*)::int n from public.route_stops where route_id='${routeId}' and branch_id='${B1}'`)).toBe(1);
+    expect(await count(`select count(*)::int n from public.route_branch_travelers where branch_id='${B1}'`)).toBe(1);
+    // Saving again replaces everything (no duplicates, old branch gone).
+    const B2 = "77777777-7777-4777-8777-777777777702";
+    await db.query(`select public.save_route_tree($1, $2, 'Tree v2', '2027-03-15', 'walk', $3::jsonb, $4::jsonb)`, [routeId, TRIP, JSON.stringify(stops.map((s) => ({ ...s, branch_id: s.branch_id ? B2 : undefined }))), JSON.stringify([{ ...branches[0], id: B2, traveler_ids: [] }])]);
+    expect(await count(`select count(*)::int n from public.route_branches where route_id='${routeId}'`)).toBe(1);
+    expect(await count(`select count(*)::int n from public.route_branches where id='${B1}'`)).toBe(0);
+    const { rows: [r] } = await db.query(`select name, mode from public.routes where id=$1`, [routeId]);
+    expect(r).toEqual({ name: "Tree v2", mode: "walk" });
+    // A branch can't split from a stop on another route, and a traveler from another trip can't be assigned.
+    const { rows: [other] } = await db.query(`select id from public.route_stops where route_id<>$1 limit 1`, [routeId]);
+    await db.query("savepoint t1");
+    await expect(db.query(`insert into public.route_branches (route_id, trip_id, name, split_after_stop_id) values ($1,$2,'X',$3)`, [routeId, TRIP, other.id])).rejects.toMatchObject({ code: "23514" });
+    await db.query("rollback to savepoint t1");
+    await db.query("savepoint t2");
+    await expect(db.query(`insert into public.route_branch_travelers (branch_id, traveler_id, trip_id) select $1, id, $2 from public.travelers where trip_id<>$2 limit 1`, [B2, TRIP])).rejects.toMatchObject({ code: "23514" });
+    await db.query("rollback to savepoint t2");
+    // Viewers can read the tree but not save one.
+    await db.query(`update public.trip_members set role='viewer' where trip_id=$1 and user_id=$2`, [TRIP, MALLORY]);
+    await as(MALLORY);
+    expect(await count(`select count(*)::int n from public.route_branches where route_id='${routeId}'`)).toBe(1);
+    await db.query("savepoint t3");
+    await expect(db.query(`select public.save_route_tree(null, $1, 'Sneaky', null, 'walk', $2::jsonb, '[]'::jsonb)`, [TRIP, JSON.stringify(stops.slice(0, 2))])).rejects.toMatchObject({ code: "42501" });
+    await db.query("rollback to savepoint t3");
+    await as(ALICE);
+    await db.query(`update public.trip_members set role='editor' where trip_id=$1 and user_id=$2`, [TRIP, MALLORY]);
+  });
+
   it("delete_my_account removes the user and hands trips to an editor", async () => {
     await as(ALICE);
     await db.query(`select public.delete_my_account()`);

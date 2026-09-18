@@ -81,8 +81,13 @@ export type RouteRow = {
 }
 export type RouteStopRow = {
   id: string; route_id: string; trip_id: string; place_id: string; sort_order: number; planned_time: string | null;
-  dwell_min: number | null; mode: TravelModeDb | null; parent_stop_id: string | null; created_at: string;
+  dwell_min: number | null; mode: TravelModeDb | null; branch_id: string | null; created_at: string;
 }
+export type RouteBranchRow = {
+  id: string; route_id: string; trip_id: string; name: string; color: string; sort_order: number;
+  split_after_stop_id: string; merge_mode: TravelModeDb | null; created_at: string;
+}
+export type RouteBranchTravelerRow = { branch_id: string; traveler_id: string; trip_id: string }
 
 export type Database = {
   public: {
@@ -96,7 +101,9 @@ export type Database = {
       place_categories: { Row: PlaceCategoryRow; Insert: PlaceCategoryRow; Update: Partial<PlaceCategoryRow>; Relationships: [] };
       stays: { Row: StayRow; Insert: Insert<StayRow, "id" | "kind" | "check_in" | "check_out" | "confirmation" | "notes" | "created_at">; Update: Partial<StayRow>; Relationships: [] };
       routes: { Row: RouteRow; Insert: Insert<RouteRow, "id" | "day" | "mode" | "notes" | "created_by" | "created_at" | "updated_at">; Update: Partial<RouteRow>; Relationships: [] };
-      route_stops: { Row: RouteStopRow; Insert: Insert<RouteStopRow, "id" | "sort_order" | "planned_time" | "dwell_min" | "mode" | "parent_stop_id" | "created_at">; Update: Partial<RouteStopRow>; Relationships: [] };
+      route_stops: { Row: RouteStopRow; Insert: Insert<RouteStopRow, "id" | "sort_order" | "planned_time" | "dwell_min" | "mode" | "branch_id" | "created_at">; Update: Partial<RouteStopRow>; Relationships: [] };
+      route_branches: { Row: RouteBranchRow; Insert: Insert<RouteBranchRow, "id" | "color" | "sort_order" | "merge_mode" | "created_at">; Update: Partial<RouteBranchRow>; Relationships: [] };
+      route_branch_travelers: { Row: RouteBranchTravelerRow; Insert: RouteBranchTravelerRow; Update: Partial<RouteBranchTravelerRow>; Relationships: [] };
       itinerary_items: { Row: ItineraryItemRow; Insert: Insert<ItineraryItemRow, "id" | "place_id" | "start_time" | "end_time" | "title" | "note" | "sort_order" | "created_at">; Update: Partial<ItineraryItemRow>; Relationships: [] };
     };
     Views: Record<string, never>;
@@ -104,6 +111,7 @@ export type Database = {
       delete_my_account: { Args: Record<string, never>; Returns: undefined };
       export_my_data: { Args: Record<string, never>; Returns: Json };
       is_trip_member: { Args: { p_trip: string; p_min_role?: MemberRole }; Returns: boolean };
+      save_route_tree: { Args: { p_route_id: string | null; p_trip_id: string; p_name: string; p_day: string | null; p_mode: TravelModeDb; p_stops: Json; p_branches: Json }; Returns: string };
     };
     Enums: { trip_status: TripStatus; member_role: MemberRole; stay_kind: StayKind; place_priority: PlacePriority; travel_mode: TravelModeDb };
     CompositeTypes: Record<string, never>;
