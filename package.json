@@ -2,7 +2,9 @@
   "name": "voya",
   "private": true,
   "packageManager": "pnpm@10.33.0",
-  "engines": { "node": ">=22" },
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "dev": "turbo run dev",
     "dev:web": "pnpm --filter @voya/web dev",
@@ -19,5 +21,11 @@
   "devDependencies": {
     "turbo": "^2.10.13",
     "typescript": "^5.9.3"
+  },
+  "pnpm": {
+    "overrides": {
+      "@types/react": "~19.2.0",
+      "@types/react-dom": "~19.2.0"
+    }
   }
 }

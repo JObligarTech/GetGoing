@@ -1,0 +1,35 @@
+{
+  "expo": {
+    "name": "Voya",
+    "slug": "voya",
+    "version": "0.1.0",
+    "scheme": "voya",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "backgroundColor": "#F6F5F1",
+    "splash": { "backgroundColor": "#2F5D3A", "resizeMode": "contain" },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "app.voya.mobile",
+      "infoPlist": {
+        "NSFaceIDUsageDescription": "Voya uses Face ID to let you back in without typing your password.",
+        "NSLocationWhenInUseUsageDescription": "Voya uses your location to navigate to your saved places and hotel.",
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "package": "app.voya.mobile",
+      "adaptiveIcon": { "backgroundColor": "#2F5D3A" },
+      "permissions": ["USE_BIOMETRIC", "USE_FINGERPRINT", "ACCESS_FINE_LOCATION"]
+    },
+    "web": { "bundler": "metro", "output": "single" },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      ["expo-local-authentication", { "faceIDPermission": "Voya uses Face ID to let you back in without typing your password." }],
+      ["expo-splash-screen", { "backgroundColor": "#2F5D3A", "dark": { "backgroundColor": "#121614" } }]
+    ],
+    "experiments": { "typedRoutes": true }
+  }
+}
