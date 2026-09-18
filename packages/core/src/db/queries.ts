@@ -26,7 +26,7 @@ export type TripListItem = Awaited<ReturnType<typeof listTrips>>[number];
 
 /** Everything the Home/Plan screens need for one trip, in one round-trip each. */
 export async function loadTripBundle(db: VoyaClient, tripId: string): Promise<TripBundle | null> {
-  const [trip, travelers, categories, places, placeCats, stays, items] = await Promise.all([
+  const [trip, travelers, categories, places, placeCats, stays, items, routes, routeStops] = await Promise.all([
     db.from("trips").select("*").eq("id", tripId).maybeSingle(),
     db.from("travelers").select("*").eq("trip_id", tripId).order("created_at"),
     db.from("categories").select("*").eq("trip_id", tripId).order("sort_order"),
@@ -34,8 +34,10 @@ export async function loadTripBundle(db: VoyaClient, tripId: string): Promise<Tr
     db.from("place_categories").select("*"),
     db.from("stays").select("*").eq("trip_id", tripId).order("check_in"),
     db.from("itinerary_items").select("*").eq("trip_id", tripId).order("day").order("sort_order"),
+    db.from("routes").select("*").eq("trip_id", tripId).order("day", { ascending: true, nullsFirst: false }).order("created_at"),
+    db.from("route_stops").select("*").eq("trip_id", tripId).order("sort_order"),
   ]);
-  for (const r of [trip, travelers, categories, places, placeCats, stays, items]) if (r.error) throw r.error;
+  for (const r of [trip, travelers, categories, places, placeCats, stays, items, routes, routeStops]) if (r.error) throw r.error;
   if (!trip.data) return null;
   return {
     trip: trip.data,
@@ -45,6 +47,8 @@ export async function loadTripBundle(db: VoyaClient, tripId: string): Promise<Tr
     placeCategories: placeCats.data ?? [],
     stays: stays.data ?? [],
     itinerary: items.data ?? [],
+    routes: routes.data ?? [],
+    routeStops: routeStops.data ?? [],
   };
 }
 

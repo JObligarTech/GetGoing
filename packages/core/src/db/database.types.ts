@@ -8,6 +8,7 @@ export type TripStatus = "draft" | "upcoming" | "active" | "past";
 export type MemberRole = "owner" | "editor" | "viewer";
 export type StayKind = "hotel" | "airbnb" | "hostel" | "friend" | "rental" | "other";
 export type PlacePriority = "must" | "maybe" | "skip";
+export type TravelModeDb = "walk" | "transit" | "drive" | "cycle";
 
 type Row<T> = T;
 type Insert<T, Optional extends keyof T, Omitted extends keyof T = never> = Omit<T, Optional | Omitted> & Partial<Pick<T, Optional>>;
@@ -74,6 +75,15 @@ export type ItineraryItemRow = {
   title: string | null; note: string | null; sort_order: number; created_at: string;
 }
 
+export type RouteRow = {
+  id: string; trip_id: string; name: string; day: string | null; mode: TravelModeDb; notes: string | null;
+  created_by: string | null; created_at: string; updated_at: string;
+}
+export type RouteStopRow = {
+  id: string; route_id: string; trip_id: string; place_id: string; sort_order: number; planned_time: string | null;
+  dwell_min: number | null; mode: TravelModeDb | null; parent_stop_id: string | null; created_at: string;
+}
+
 export type Database = {
   public: {
     Tables: {
@@ -85,6 +95,8 @@ export type Database = {
       places: { Row: PlaceRow; Insert: Insert<PlaceRow, "id" | "address" | "local_name" | "local_address" | "lat" | "lng" | "provider" | "provider_ref" | "phone" | "website" | "hours" | "notes" | "priority" | "created_by" | "created_at" | "updated_at">; Update: Partial<PlaceRow>; Relationships: [] };
       place_categories: { Row: PlaceCategoryRow; Insert: PlaceCategoryRow; Update: Partial<PlaceCategoryRow>; Relationships: [] };
       stays: { Row: StayRow; Insert: Insert<StayRow, "id" | "kind" | "check_in" | "check_out" | "confirmation" | "notes" | "created_at">; Update: Partial<StayRow>; Relationships: [] };
+      routes: { Row: RouteRow; Insert: Insert<RouteRow, "id" | "day" | "mode" | "notes" | "created_by" | "created_at" | "updated_at">; Update: Partial<RouteRow>; Relationships: [] };
+      route_stops: { Row: RouteStopRow; Insert: Insert<RouteStopRow, "id" | "sort_order" | "planned_time" | "dwell_min" | "mode" | "parent_stop_id" | "created_at">; Update: Partial<RouteStopRow>; Relationships: [] };
       itinerary_items: { Row: ItineraryItemRow; Insert: Insert<ItineraryItemRow, "id" | "place_id" | "start_time" | "end_time" | "title" | "note" | "sort_order" | "created_at">; Update: Partial<ItineraryItemRow>; Relationships: [] };
     };
     Views: Record<string, never>;
@@ -93,7 +105,7 @@ export type Database = {
       export_my_data: { Args: Record<string, never>; Returns: Json };
       is_trip_member: { Args: { p_trip: string; p_min_role?: MemberRole }; Returns: boolean };
     };
-    Enums: { trip_status: TripStatus; member_role: MemberRole; stay_kind: StayKind; place_priority: PlacePriority };
+    Enums: { trip_status: TripStatus; member_role: MemberRole; stay_kind: StayKind; place_priority: PlacePriority; travel_mode: TravelModeDb };
     CompositeTypes: Record<string, never>;
   };
 }

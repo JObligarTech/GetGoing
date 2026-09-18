@@ -1,6 +1,6 @@
 import "server-only";
 import { cookies } from "next/headers";
-import { demoBundle, demoTrips, type ItineraryItem, type TripBundle, type TripInput, type TripListItem } from "@voya/core";
+import { demoBundle, demoTrips, type ItineraryItem, type RouteInput, type TripBundle, type TripInput, type TripListItem } from "@voya/core";
 
 /**
  * In-memory demo data so create/assign flows work end-to-end without Supabase.
@@ -46,9 +46,18 @@ export const demoStore = {
     s.trips.push(trip);
     s.bundles.set(id, {
       trip, travelers: [{ id: crypto.randomUUID(), trip_id: id, user_id: ownerId, name: "Joe Obligar", color: "#2F5D3A", created_at: ts }],
-      categories: [], places: [], placeCategories: [], stays: [], itinerary: [],
+      categories: [], places: [], placeCategories: [], stays: [], itinerary: [], routes: [], routeStops: [],
     });
     return trip;
+  },
+
+  async saveRoute(tripId: string, input: Omit<RouteInput, "tripId">, userId: string) {
+    const b = (await state()).bundles.get(tripId);
+    if (!b) return null;
+    const id = crypto.randomUUID(), ts = new Date().toISOString();
+    b.routes.push({ id, trip_id: tripId, name: input.name, day: input.day, mode: input.mode, notes: null, created_by: userId, created_at: ts, updated_at: ts });
+    input.stops.forEach((s, i) => b.routeStops.push({ id: crypto.randomUUID(), route_id: id, trip_id: tripId, place_id: s.placeId, sort_order: i, planned_time: s.plannedTime, dwell_min: null, mode: null, parent_stop_id: null, created_at: ts }));
+    return id;
   },
 
   async assignPlaceToSlot(tripId: string, itemId: string, placeId: string): Promise<ItineraryItem | null> {

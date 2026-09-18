@@ -1,5 +1,5 @@
 import type {
-  CategoryRow, ItineraryItemRow, PlaceCategoryRow, PlaceRow, ProfileRow, StayRow, TravelerRow, TripRow,
+  CategoryRow, ItineraryItemRow, PlaceCategoryRow, PlaceRow, ProfileRow, RouteRow, RouteStopRow, StayRow, TravelerRow, TripRow,
 } from "./db/database.types";
 
 export interface TripBundle {
@@ -10,6 +10,8 @@ export interface TripBundle {
   placeCategories: PlaceCategoryRow[];
   stays: StayRow[];
   itinerary: ItineraryItemRow[];
+  routes: RouteRow[];
+  routeStops: RouteStopRow[];
 }
 
 export type Profile = ProfileRow;
@@ -19,6 +21,8 @@ export type Stay = StayRow;
 export type Category = CategoryRow;
 export type Traveler = TravelerRow;
 export type ItineraryItem = ItineraryItemRow;
+export type SavedRoute = RouteRow;
+export type SavedRouteStop = RouteStopRow;
 
 export interface LatLng { lat: number; lng: number }
 

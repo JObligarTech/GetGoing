@@ -47,7 +47,7 @@ export default function Place() {
           {place.priority === "must" && !stay && <Chip>Must visit</Chip>}
         </View>
         <View style={{ flexDirection: "row", gap: 8 }}>
-          <Button variant="ink" label={stay ? "Take me back to my hotel" : "Navigate"} icon={<Ionicons name="compass-outline" size={18} color={t.onInk} />} style={{ flex: 1 }} onPress={() => router.push("/(tabs)/navigate")} />
+          <Button variant="ink" label={stay ? "Take me back to my hotel" : "Navigate"} icon={<Ionicons name="compass-outline" size={18} color={t.onInk} />} style={{ flex: 1 }} onPress={() => router.push({ pathname: "/navigate/route", params: { to: place.id } })} />
           <Pressable accessibilityRole="button" accessibilityLabel={`${place.name} is saved`} accessibilityState={{ selected: true }} style={{ width: 52, height: 44, borderRadius: 14, borderWidth: 1, borderColor: t.borderStrong, backgroundColor: t.surface, alignItems: "center", justifyContent: "center" }}><Ionicons name="bookmark" size={18} color={t.primary} /></Pressable>
         </View>
 

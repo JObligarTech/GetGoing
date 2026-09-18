@@ -127,7 +127,7 @@ export default async function HomePage() {
 
       {/* Desktop CTAs pinned to the bottom of the column */}
       <div className={`hidden gap-2 px-4 pt-3.5 pb-6 md:px-7 lg:flex ${col} lg:row-start-5 lg:self-end`}>
-        <Button href="/navigate" variant="ink" full>{firstPlace ? `Navigate to ${firstPlace.name.split(" ")[0]}` : "Navigate"}</Button>
+        <Button href={firstPlace ? `/navigate/route?to=${firstPlace.id}` : "/navigate"} variant="ink" full>{firstPlace ? `Navigate to ${firstPlace.name.split(" ")[0]}` : "Navigate"}</Button>
         <Button href={`/plan?day=${day}`} variant="secondary" full>Plan Day {tripDayNumber(active, day) ?? 1}</Button>
       </div>
       <div className="h-6 lg:hidden" />

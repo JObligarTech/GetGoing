@@ -57,17 +57,17 @@ export async function createTrip(_prev: ActionState, formData: FormData): Promis
     id = (await demoStore.createTrip(parsed.data, user.id)).id;
   } else {
     const db = await createServerSupabase();
-    const { data, error } = await db
+    // The id is minted here rather than read back with RETURNING: the select policy needs the
+    // owner membership, which the after-insert trigger only creates once the statement ends.
+    id = crypto.randomUUID();
+    const { error } = await db
       .from("trips")
       .insert({
-        owner_id: user.id, name: parsed.data.name, countries: parsed.data.countries, cities: parsed.data.cities,
+        id, owner_id: user.id, name: parsed.data.name, countries: parsed.data.countries, cities: parsed.data.cities,
         start_date: parsed.data.startDate, end_date: parsed.data.endDate, status: parsed.data.startDate ? "upcoming" : "draft",
         local_currency: parsed.data.localCurrency, local_tz: parsed.data.localTz, local_language: parsed.data.localLanguage, notes: parsed.data.notes,
-      })
-      .select("id")
-      .single();
-    if (error || !data) return { error: "Couldn't create the trip. Try again." };
-    id = data.id;
+      });
+    if (error) return { error: "Couldn't create the trip. Try again." };
   }
   (await cookies()).set(ACTIVE_TRIP_COOKIE, id, cookieOpts);
   revalidatePath("/trips");

@@ -109,6 +109,31 @@ describe.skipIf(!url)("row level security", () => {
     await db.query("rollback to savepoint s6");
   });
 
+  it("routes: stops must belong to the route's trip; members read, viewers can't write", async () => {
+    await as(ALICE);
+    const { rows: [route] } = await db.query(`insert into public.routes (trip_id, name, day, mode) values ($1,'Morning',null,'walk') returning id`, [TRIP]);
+    const { rows: [place] } = await db.query(`select id from public.places where trip_id=$1 limit 1`, [TRIP]);
+    await db.query(`insert into public.route_stops (route_id, trip_id, place_id, sort_order) values ($1,$2,$3,0)`, [route.id, TRIP, place.id]);
+    // A second trip owned by alice: a stop can't point its route at a place from another trip.
+    // (No RETURNING here: RLS applies the select policy to returned rows before the membership
+    // trigger has fired, so a fresh trip can't be read back in the same statement.)
+    const OTHER = "dddddddd-dddd-4ddd-8ddd-dddddddddddd";
+    await db.query(`insert into public.trips (id, owner_id, name) values ($1,$2,'Other')`, [OTHER, ALICE]);
+    const { rows: [foreign] } = await db.query(`insert into public.places (trip_id, name) values ($1,'Elsewhere') returning id`, [OTHER]);
+    await db.query("savepoint r1");
+    await expect(db.query(`insert into public.route_stops (route_id, trip_id, place_id, sort_order) values ($1,$2,$3,1)`, [route.id, TRIP, foreign.id])).rejects.toMatchObject({ code: "23514" });
+    await db.query("rollback to savepoint r1");
+    // Mallory is an editor on TRIP (from the earlier test) and can read the route; drop her to viewer → no writes.
+    await db.query(`update public.trip_members set role='viewer' where trip_id=$1 and user_id=$2`, [TRIP, MALLORY]);
+    await as(MALLORY);
+    expect(await count(`select count(*)::int n from public.routes where id='${route.id}'`)).toBe(1);
+    await db.query("savepoint r2");
+    await expect(db.query(`insert into public.routes (trip_id, name) values ($1,'Sneaky')`, [TRIP])).rejects.toMatchObject({ code: "42501" });
+    await db.query("rollback to savepoint r2");
+    await as(ALICE);
+    await db.query(`update public.trip_members set role='editor' where trip_id=$1 and user_id=$2`, [TRIP, MALLORY]);
+  });
+
   it("delete_my_account removes the user and hands trips to an editor", async () => {
     await as(ALICE);
     await db.query(`select public.delete_my_account()`);

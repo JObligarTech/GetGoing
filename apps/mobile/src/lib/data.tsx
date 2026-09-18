@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import {
-  DEMO_NOW, demoBundle, demoTrips, listTrips, loadTripBundle, pickActiveTrip, type TripBundle, type TripListItem,
+  DEMO_NOW, demoBundle, demoTrips, listTrips, loadTripBundle, pickActiveTrip, routeSchema, type RouteInput, type TripBundle, type TripListItem,
 } from "@voya/core";
 import { getSupabase, isDemo, prefs } from "./supabase";
 import { useSession } from "./session";
@@ -13,6 +13,8 @@ interface DataState {
   loading: boolean;
   setActive(id: string): Promise<void>;
   assignPlaceToSlot(itemId: string, placeId: string): Promise<void>;
+  /** Save a named multi-stop route on the active trip; resolves the new route id or an error message. */
+  saveRoute(input: Omit<RouteInput, "tripId">): Promise<{ id: string } | { error: string }>;
   refresh(): Promise<void>;
 }
 
@@ -66,8 +68,33 @@ export function DataProvider({ children }: { children: ReactNode }) {
     await refresh();
   }, [bundle, demo, refresh]);
 
+  const saveRoute = useCallback<DataState["saveRoute"]>(async (input) => {
+    if (!bundle || !user) return { error: "No active trip." };
+    const parsed = routeSchema.safeParse({ ...input, tripId: bundle.trip.id });
+    if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Check the route." };
+    if (!parsed.data.stops.every((s) => bundle.places.some((p) => p.id === s.placeId))) return { error: "One of the stops isn't on this trip." };
+    const { tripId, name, day, mode, stops } = parsed.data;
+    // Ids are minted here (not read back with RETURNING) so RLS can't refuse the read of a row it just accepted.
+    const id = crypto.randomUUID();
+    if (isDemo) {
+      const b = demo.bundles.get(tripId);
+      if (!b) return { error: "No active trip." };
+      const ts = new Date().toISOString();
+      b.routes.push({ id, trip_id: tripId, name, day, mode, notes: null, created_by: user.id, created_at: ts, updated_at: ts });
+      stops.forEach((s, i) => b.routeStops.push({ id: crypto.randomUUID(), route_id: id, trip_id: tripId, place_id: s.placeId, sort_order: i, planned_time: s.plannedTime, dwell_min: null, mode: null, parent_stop_id: null, created_at: ts }));
+    } else {
+      const db = await getSupabase();
+      const { error } = await db.from("routes").insert({ id, trip_id: tripId, name, day, mode, created_by: user.id });
+      if (error) return { error: "Couldn't save the route." };
+      const { error: e2 } = await db.from("route_stops").insert(stops.map((s, i) => ({ route_id: id, trip_id: tripId, place_id: s.placeId, sort_order: i, planned_time: s.plannedTime })));
+      if (e2) return { error: "Couldn't save the stops." };
+    }
+    await refresh();
+    return { id };
+  }, [bundle, user, demo, refresh]);
+
   const active = trips.find((t) => t.id === activeId) ?? null;
-  const value = useMemo<DataState>(() => ({ now, trips, active, bundle, loading, setActive, assignPlaceToSlot, refresh }), [now, trips, active, bundle, loading, setActive, assignPlaceToSlot, refresh]);
+  const value = useMemo<DataState>(() => ({ now, trips, active, bundle, loading, setActive, assignPlaceToSlot, saveRoute, refresh }), [now, trips, active, bundle, loading, setActive, assignPlaceToSlot, saveRoute, refresh]);
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 

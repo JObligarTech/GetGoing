@@ -69,6 +69,17 @@ export const demoBundle: TripBundle = {
     { id: "i4", trip_id: T, place_id: P(4), day: "2027-03-15", start_time: "16:30", end_time: null, title: null, note: "Tickets booked", sort_order: 4, created_at: ts },
     { id: "i5", trip_id: T, place_id: P(5), day: "2027-03-15", start_time: "19:30", end_time: null, title: null, note: "Dinner · reserved for 4", sort_order: 5, created_at: ts },
   ],
+  routes: [
+    { id: "55555555-5555-4555-8555-555555555551", trip_id: T, name: "Morning Shibuya", day: "2027-03-15", mode: "walk", notes: null, created_by: DEMO_USER_ID, created_at: ts, updated_at: ts },
+    { id: "55555555-5555-4555-8555-555555555552", trip_id: T, name: "Airport → Hotel", day: "2027-03-15", mode: "transit", notes: null, created_by: DEMO_USER_ID, created_at: ts, updated_at: ts },
+  ],
+  routeStops: [
+    { id: "rs1", route_id: "55555555-5555-4555-8555-555555555551", trip_id: T, place_id: P(1), sort_order: 0, planned_time: "08:40", dwell_min: null, mode: null, parent_stop_id: null, created_at: ts },
+    { id: "rs2", route_id: "55555555-5555-4555-8555-555555555551", trip_id: T, place_id: P(2), sort_order: 1, planned_time: "09:00", dwell_min: 45, mode: null, parent_stop_id: null, created_at: ts },
+    { id: "rs3", route_id: "55555555-5555-4555-8555-555555555551", trip_id: T, place_id: P(4), sort_order: 2, planned_time: "10:15", dwell_min: 75, mode: null, parent_stop_id: null, created_at: ts },
+    { id: "rs4", route_id: "55555555-5555-4555-8555-555555555551", trip_id: T, place_id: P(5), sort_order: 3, planned_time: "12:00", dwell_min: null, mode: null, parent_stop_id: null, created_at: ts },
+    { id: "rs5", route_id: "55555555-5555-4555-8555-555555555552", trip_id: T, place_id: P(1), sort_order: 0, planned_time: null, dwell_min: null, mode: null, parent_stop_id: null, created_at: ts },
+  ],
 };
 
 /** Fixed "now" used by demo mode so countdowns match the mockups (12 days away). */

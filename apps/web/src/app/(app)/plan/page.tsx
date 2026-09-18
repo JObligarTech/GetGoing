@@ -83,7 +83,7 @@ export default async function PlanPage({ searchParams }: { searchParams: Promise
       {openSlots > 0 && <Hint>Tap the open slot to pick from {nearby} saved {nearby === 1 ? "place" : "places"} nearby.</Hint>}
 
       <div className="mt-auto flex gap-2 pt-2 lg:hidden">
-        <Button href="/navigate" variant="ink" size="cta" full>Navigate the day</Button>
+        <Button href={`/navigate/day?day=${day}`} variant="ink" size="cta" full>Navigate the day</Button>
         <Button href={`/plan?day=${day}&view=${q.view === "map" ? "day" : "map"}`} variant="secondary" size="cta" full>{q.view === "map" ? "List" : "Map"}</Button>
       </div>
     </FadeIn>

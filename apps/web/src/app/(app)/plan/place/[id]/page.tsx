@@ -57,7 +57,7 @@ export default async function PlacePage({ params }: { params: Promise<{ id: stri
         </header>
 
         <div className="flex gap-2">
-          <Button href="/navigate" variant="ink" full icon={<Compass size={18} />}>{stay ? "Take me back to my hotel" : "Navigate"}</Button>
+          <Button href={`/navigate/route?to=${place.id}`} variant="ink" full icon={<Compass size={18} />}>{stay ? "Take me back to my hotel" : "Navigate"}</Button>
           <Button variant="secondary" aria-label={`${place.name} is saved`} aria-pressed icon={<Bookmark size={18} className="fill-current text-primary" />}><span className="sr-only">Saved</span></Button>
         </div>
 

@@ -112,6 +112,15 @@ export const itineraryItemSchema = z
   })
   .refine((v) => v.placeId || v.title, { message: "Pick a place or give the slot a title" });
 
+export const routeSchema = z.object({
+  tripId: z.uuid(),
+  name: text(120),
+  day: dateStr.nullable().default(null),
+  mode: z.enum(["walk", "transit", "drive", "cycle"]).default("transit"),
+  stops: z.array(z.object({ placeId: z.uuid(), plannedTime: timeStr.nullable().default(null) })).min(2).max(30),
+});
+export type RouteInput = z.infer<typeof routeSchema>;
+
 export const profileSchema = z.object({
   displayName: text(80),
   homeCurrency: iso3,

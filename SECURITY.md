@@ -16,6 +16,8 @@ Verified by `supabase/tests/rls.test.sql` (pgTAP) and `packages/core/db-tests/rl
 - **Rate limiting**: in-memory token bucket per IP+scope(+email) for auth actions (`src/lib/rate-limit.ts`), on top of Supabase's own auth limits. For multi-instance deployments back it with a shared store (e.g. Upstash).
 - **CSRF**: server actions are same-origin by construction; the destructive `deleteAccount` and the export route additionally reject `Sec-Fetch-Site: cross-site`.
 - **Trip switching and slot assignment** only accept ids the user can see; writes filter by `trip_id` so a guessed row id can't cross trips even before RLS.
+- **Navigate** takes only uuids for `to`/`from`/`route` (zod-checked before any lookup; anything else is a 404), resolves them inside the active trip's bundle, and `saveRoute` verifies every stop belongs to that trip before inserting. The database repeats the check: `guard_route_stop()` raises on a stop whose place is from another trip, and `route_stops` are readable/writable only through the parent trip's membership.
+- **Routing requests** are made server-side (web) or on-device (mobile) with coordinates only — no place names or user identifiers leave the app. The OSRM adapter is opt-in; the default is an offline mock.
 - **404, not 403** for trips you can't see — no existence leak.
 - **Demo mode** (`VOYA_DEMO=1`) is per-session, in-memory, and refuses to boot on a production deployment.
 - **Dependencies**: no analytics, no third-party scripts; map tiles come from `tile.openstreetmap.org` only (allow-listed in CSP `img-src`/`connect-src`).
