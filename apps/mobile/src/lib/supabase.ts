@@ -33,14 +33,15 @@ const secureStorage = {
 };
 
 let client: SupabaseClient<Database> | null = null;
-export function getSupabase(): SupabaseClient<Database> {
+/** Loaded on first use only: demo mode / Expo Go never touch the network stack. */
+export async function getSupabase(): Promise<SupabaseClient<Database>> {
   if (isDemo) throw new Error("Supabase is not configured (demo mode)");
-  // Loaded on first use only: keeps demo mode / Expo Go start-up light and avoids touching
-  // network globals until a backend is actually configured.
-  const { createClient } = require("@supabase/supabase-js") as typeof import("@supabase/supabase-js");
-  client ??= createClient<Database>(SUPABASE_URL, SUPABASE_ANON_KEY, {
-    auth: { storage: secureStorage, autoRefreshToken: true, persistSession: true, detectSessionInUrl: false },
-  });
+  if (!client) {
+    const { createClient } = await import("@supabase/supabase-js");
+    client = createClient<Database>(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      auth: { storage: secureStorage, autoRefreshToken: true, persistSession: true, detectSessionInUrl: false },
+    });
+  }
   return client;
 }
 

@@ -20,7 +20,7 @@ export function Button({ variant = "primary", size = "md", label, icon, full, st
   const t = useTheme();
   const reduce = useReducedMotion();
   const scale = useSharedValue(1);
-  const animated = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+  const animated = useAnimatedStyle(() => ({ transform: [{ scale: scale.get() }] }));
   const colors: Record<ButtonVariant, { bg: string; fg: string; border?: string }> = {
     primary: { bg: t.primary, fg: t.onPrimary },
     ink: { bg: t.ink, fg: t.onInk },
@@ -39,8 +39,8 @@ export function Button({ variant = "primary", size = "md", label, icon, full, st
       accessibilityLabel={label}
       accessibilityState={{ disabled: !!disabled }}
       disabled={disabled}
-      onPressIn={() => { if (!reduce) scale.value = withTiming(motionTokens.pressScale, { duration: motionTokens.duration.fast }); }}
-      onPressOut={() => { scale.value = withTiming(1, { duration: motionTokens.duration.base }); }}
+      onPressIn={() => { if (!reduce) scale.set(withTiming(motionTokens.pressScale, { duration: motionTokens.duration.fast })); }}
+      onPressOut={() => { scale.set(withTiming(1, { duration: motionTokens.duration.base })); }}
       style={[
         { height, minHeight: 44, borderRadius: rounded, paddingHorizontal: 18, backgroundColor: c.bg, borderWidth: c.border ? 1 : 0, borderColor: c.border, opacity: disabled ? 0.5 : 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 },
         full && { alignSelf: "stretch" },

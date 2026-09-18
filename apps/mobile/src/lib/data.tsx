@@ -30,22 +30,23 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [demo] = useState(() => ({ trips: clone(demoTrips), bundles: new Map([[demoBundle.trip.id, clone(demoBundle)]]) }));
   const now = useMemo(() => (isDemo ? DEMO_NOW : new Date()), []);
 
-  const refresh = useCallback(async () => {
-    if (!user) { setTrips([]); setBundle(null); setLoading(false); return; }
-    setLoading(true);
-    try {
-      const list = isDemo ? demo.trips : await listTrips(getSupabase());
-      setTrips(list);
-      const saved = await prefs.get("activeTrip");
-      const chosen = list.find((t) => t.id === saved) ?? pickActiveTrip(list, now, user.profile.home_tz);
-      setActiveId(chosen?.id ?? null);
-      setBundle(chosen ? (isDemo ? demo.bundles.get(chosen.id) ?? null : await loadTripBundle(getSupabase(), chosen.id)) : null);
-    } finally {
-      setLoading(false);
-    }
+  /** Pure load step; callers apply the result so state changes always follow an await. */
+  const load = useCallback(async () => {
+    if (!user) return { trips: [] as TripListItem[], activeId: null as string | null, bundle: null as TripBundle | null };
+    const list = isDemo ? demo.trips : await listTrips(await getSupabase());
+    const saved = await prefs.get("activeTrip");
+    const chosen = list.find((t) => t.id === saved) ?? pickActiveTrip(list, now, user.profile.home_tz);
+    const b = chosen ? (isDemo ? demo.bundles.get(chosen.id) ?? null : await loadTripBundle(await getSupabase(), chosen.id)) : null;
+    return { trips: list, activeId: chosen?.id ?? null, bundle: b };
   }, [user, demo, now]);
+  const apply = useCallback((r: Awaited<ReturnType<typeof load>>) => { setTrips(r.trips); setActiveId(r.activeId); setBundle(r.bundle); setLoading(false); }, []);
+  const refresh = useCallback(async () => apply(await load()), [load, apply]);
 
-  useEffect(() => { void refresh(); }, [refresh]);
+  useEffect(() => {
+    let alive = true;
+    load().then((r) => { if (alive) apply(r); });
+    return () => { alive = false; };
+  }, [load, apply]);
 
   const setActive = useCallback(async (id: string) => {
     if (!trips.some((t) => t.id === id)) return;
@@ -60,7 +61,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       const item = b?.itinerary.find((i) => i.id === itemId);
       if (item && b?.places.some((p) => p.id === placeId)) item.place_id = placeId;
     } else {
-      await getSupabase().from("itinerary_items").update({ place_id: placeId, note: null }).eq("id", itemId).eq("trip_id", bundle.trip.id);
+      await (await getSupabase()).from("itinerary_items").update({ place_id: placeId, note: null }).eq("id", itemId).eq("trip_id", bundle.trip.id);
     }
     await refresh();
   }, [bundle, demo, refresh]);

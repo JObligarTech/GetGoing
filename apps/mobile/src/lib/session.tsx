@@ -42,9 +42,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
           if (!cancelled) setBiometrics(types.includes(LocalAuthentication.AuthenticationType.FACIAL_RECOGNITION) ? "face" : "fingerprint");
         }
         if (!isDemo) {
-          const { data } = await getSupabase().auth.getSession();
+          const sb = await getSupabase();
+          const { data } = await sb.auth.getSession();
           if (data.session && !cancelled) {
-            const { data: profile } = await getSupabase().from("profiles").select("*").eq("id", data.session.user.id).maybeSingle();
+            const { data: profile } = await sb.from("profiles").select("*").eq("id", data.session.user.id).maybeSingle();
             if (profile) setLocked({ id: data.session.user.id, email: data.session.user.email ?? null, profile });
           }
         }
@@ -70,9 +71,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       await remember("Joe", DEMO.email);
       return null;
     }
-    const { data, error } = await getSupabase().auth.signInWithPassword(parsed.data);
+    const sb = await getSupabase();
+    const { data, error } = await sb.auth.signInWithPassword(parsed.data);
     if (error || !data.user) return "Email or password is incorrect.";
-    const { data: profile } = await getSupabase().from("profiles").select("*").eq("id", data.user.id).maybeSingle();
+    const { data: profile } = await sb.from("profiles").select("*").eq("id", data.user.id).maybeSingle();
     if (!profile) return "Couldn't load your profile.";
     setUser({ id: data.user.id, email: data.user.email ?? null, profile });
     await remember(profile.display_name, parsed.data.email);
@@ -92,7 +94,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, [biometrics, locked]);
 
   const signOut = useCallback(async () => {
-    if (!isDemo) await getSupabase().auth.signOut();
+    if (!isDemo) await (await getSupabase()).auth.signOut();
     setUser(null);
     setLocked(null);
   }, []);
