@@ -17,8 +17,16 @@ export interface GeocodeProvider {
   search(query: string, opts?: { near?: LatLng; countryCodes?: string[]; limit?: number; signal?: AbortSignal }): Promise<PlaceSearchResult[]>;
 }
 
+export interface Translation {
+  text: string;
+  /** Latin-script reading for non-Latin targets ("Eki wa doko desu ka?") */
+  romanized?: string;
+  source?: "mock" | "live";
+  /** The mock couldn't translate this; the UI says so instead of presenting it as real. */
+  approximate?: boolean;
+}
 export interface TranslationProvider {
-  translate(text: string, from: string, to: string, opts?: { signal?: AbortSignal }): Promise<{ text: string; romanized?: string }>;
+  translate(text: string, from: string, to: string, opts?: { signal?: AbortSignal }): Promise<Translation>;
 }
 
 export interface FxRate { base: string; quote: string; rate: number; asOf: string }

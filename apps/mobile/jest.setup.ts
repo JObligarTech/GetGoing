@@ -39,3 +39,15 @@ jest.mock("react-native-webview", () => {
   const { View } = require("react-native");
   return { WebView: (props: object) => React.createElement(View, { testID: "webview", ...props }) };
 });
+jest.mock("expo-speech", () => ({
+  speak: jest.fn((_text: string, opts?: { onDone?: () => void }) => { opts?.onDone?.(); }),
+  stop: jest.fn(async () => {}),
+  isSpeakingAsync: jest.fn(async () => false),
+}));
+jest.mock("expo-clipboard", () => ({ setStringAsync: jest.fn(async () => true), getStringAsync: jest.fn(async () => "") }));
+jest.mock("expo-image-picker", () => ({
+  requestCameraPermissionsAsync: jest.fn(async () => ({ status: "granted", granted: true })),
+  requestMediaLibraryPermissionsAsync: jest.fn(async () => ({ status: "granted", granted: true })),
+  launchCameraAsync: jest.fn(async () => ({ canceled: false, assets: [{ uri: "file:///tmp/menu.jpg", width: 600, height: 800, mimeType: "image/jpeg", fileSize: 1024 }] })),
+  launchImageLibraryAsync: jest.fn(async () => ({ canceled: true, assets: null })),
+}));

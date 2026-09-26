@@ -94,3 +94,11 @@ insert into public.route_branch_travelers (branch_id, traveler_id, trip_id)
   select '77777777-7777-4777-8777-777777777771', id, trip_id from public.travelers where trip_id = '22222222-2222-4222-8222-222222222221' and name in ('Joe Obligar', 'Sarah');
 insert into public.route_branch_travelers (branch_id, traveler_id, trip_id)
   select '77777777-7777-4777-8777-777777777772', id, trip_id from public.travelers where trip_id = '22222222-2222-4222-8222-222222222221' and name in ('Chris', 'Daniel');
+
+-- Saved phrases and the extra currency on Japan 2027
+insert into public.phrases (id, trip_id, source_text, source_lang, target_text, target_lang, romanized, sort_order, created_by) values
+  ('88888888-8888-4888-8888-888888888881', '22222222-2222-4222-8222-222222222221', 'Where is the station?', 'en', '駅はどこですか？', 'ja', 'Eki wa doko desu ka?', 0, '11111111-1111-4111-8111-111111111111'),
+  ('88888888-8888-4888-8888-888888888882', '22222222-2222-4222-8222-222222222221', 'No peanuts, please', 'en', 'ピーナッツ抜きでお願いします', 'ja', 'Pīnattsu nuki de onegaishimasu', 1, '11111111-1111-4111-8111-111111111111'),
+  ('88888888-8888-4888-8888-888888888883', '22222222-2222-4222-8222-222222222221', 'Table for four', 'en', '4人です', 'ja', 'Yonin desu', 2, '11111111-1111-4111-8111-111111111111');
+insert into public.trip_currencies (trip_id, code, label, sort_order) values
+  ('22222222-2222-4222-8222-222222222221', 'KRW', 'KRW · Seoul layover', 0);

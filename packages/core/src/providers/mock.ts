@@ -20,41 +20,70 @@ export const mockGeocode: GeocodeProvider = {
   },
 };
 
+/** English ↔ Japanese phrasebook (both directions) plus the menu words the camera mock reads. */
 const PHRASES: Record<string, { text: string; romanized: string }> = {
-  "can we have separate checks, please?": { text: "別々に会計できますか？", romanized: "Betsubetsu ni kaikei dekimasu ka?" },
-  "take me to this address, please.": { text: "この住所までお願いします。", romanized: "Kono jūsho made onegaishimasu." },
-  "where is the station?": { text: "駅はどこですか？", romanized: "Eki wa doko desu ka?" },
-  "thank you": { text: "ありがとうございます", romanized: "Arigatō gozaimasu" },
+  "Can we have separate checks, please?": { text: "別々に会計できますか？", romanized: "Betsubetsu ni kaikei dekimasu ka?" },
+  "Take me to this address, please.": { text: "この住所までお願いします。", romanized: "Kono jūsho made onegaishimasu." },
+  "Please take me here.": { text: "ここまでお願いします", romanized: "Koko made onegaishimasu" },
+  "Where is the station?": { text: "駅はどこですか？", romanized: "Eki wa doko desu ka?" },
+  "Where is the entrance?": { text: "入口はどこですか？", romanized: "Iriguchi wa doko desu ka?" },
+  "No peanuts, please": { text: "ピーナッツ抜きでお願いします", romanized: "Pīnattsu nuki de onegaishimasu" },
+  "Table for four": { text: "4人です", romanized: "Yonin desu" },
+  "Thank you": { text: "ありがとうございます", romanized: "Arigatō gozaimasu" },
+  "Hello": { text: "こんにちは", romanized: "Konnichiwa" },
+  "Excuse me": { text: "すみません", romanized: "Sumimasen" },
+  "How much is this?": { text: "これはいくらですか？", romanized: "Kore wa ikura desu ka?" },
+  "I have a reservation.": { text: "予約しています", romanized: "Yoyaku shite imasu" },
+  "The check, please.": { text: "お会計をお願いします", romanized: "Okaikei o onegaishimasu" },
+  "Does this contain peanuts?": { text: "これにピーナッツは入っていますか？", romanized: "Kore ni pīnattsu wa haitte imasu ka?" },
+  "Yuzu Shio Ramen": { text: "柚子塩らーめん", romanized: "Yuzu shio rāmen" },
+  "Tsukemen (dipping noodles)": { text: "つけ麺", romanized: "Tsukemen" },
+  "Gyoza, 5 pcs": { text: "餃子 5個", romanized: "Gyōza go-ko" },
+  "Extra chashu": { text: "チャーシュー追加", romanized: "Chāshū tsuika" },
+  "Draft beer": { text: "生ビール", romanized: "Nama bīru" },
+  "Cola": { text: "コーラ", romanized: "Kōra" },
+  "Total": { text: "合計", romanized: "Gōkei" },
+  "Contains wheat, soy and egg": { text: "小麦・大豆・卵を含む", romanized: "Komugi, daizu, tamago o fukumu" },
 };
+const norm = (s: string) => s.trim().toLowerCase().replace(/[。？?！!.]+$/u, "");
+const EN_JA = new Map(Object.entries(PHRASES).map(([en, ja]) => [norm(en), { en, ...ja }]));
+const JA_EN = new Map(Object.entries(PHRASES).map(([en, ja]) => [norm(ja.text), en]));
 export const mockTranslation: TranslationProvider = {
-  async translate(text, _from, to) {
-    const hit = PHRASES[text.trim().toLowerCase()];
-    if (to === "ja" && hit) return hit;
-    return { text: `[${to}] ${text}` };
+  async translate(text, from, to) {
+    const key = norm(text);
+    if (to === "ja" && from !== "ja") { const hit = EN_JA.get(key); if (hit) return { text: hit.text, romanized: hit.romanized, source: "mock" }; }
+    if (to === "en" && from !== "en") { const hit = JA_EN.get(key); if (hit) return { text: hit, source: "mock" }; }
+    // Outside the phrasebook the mock hands the text back and says so; the UI shows a "demo" note instead of a fake translation.
+    return { text, source: "mock", approximate: from !== to };
   },
 };
 
-const RATES: Record<string, number> = { "USD:JPY": 149.7, "USD:EUR": 0.92, "USD:IDR": 15600, "USD:GBP": 0.79 };
+/** USD-based table; other pairs triangulate through USD. `asOf` is fixed so "Updated …" is deterministic in tests. */
+const RATES: Record<string, number> = {
+  "USD:JPY": 149.7, "USD:EUR": 0.92, "USD:IDR": 15600, "USD:GBP": 0.79, "USD:KRW": 1342, "USD:THB": 36.2, "USD:VND": 24800, "USD:INR": 83.5,
+  "USD:AUD": 1.52, "USD:CAD": 1.36, "USD:CNY": 7.24, "USD:CHF": 0.88, "USD:SGD": 1.34, "USD:TWD": 32.1, "USD:MXN": 17.1, "USD:BRL": 5.1, "USD:NZD": 1.64, "USD:HKD": 7.8, "USD:PHP": 56.3,
+};
+export const MOCK_FX_AS_OF = "2027-03-03T05:39:00Z";
+const usdRate = (code: string): number | undefined => (code === "USD" ? 1 : RATES[`USD:${code}`]);
 export const mockFx: FxProvider = {
   async rate(base, quote) {
-    if (base === quote) return { base, quote, rate: 1, asOf: new Date(0).toISOString() };
-    const direct = RATES[`${base}:${quote}`];
-    const inverse = RATES[`${quote}:${base}`];
-    const rate = direct ?? (inverse ? 1 / inverse : undefined);
-    if (rate === undefined) throw new Error(`No mock rate for ${base}→${quote}`);
-    return { base, quote, rate, asOf: "2026-09-18T00:00:00Z" };
+    if (base === quote) return { base, quote, rate: 1, asOf: MOCK_FX_AS_OF };
+    const b = usdRate(base), q = usdRate(quote);
+    if (b === undefined || q === undefined) throw new Error(`No mock rate for ${base}→${quote}`);
+    return { base, quote, rate: q / b, asOf: MOCK_FX_AS_OF };
   },
 };
 
+/** A ramen-shop menu; boxes are [x, y, w, h] as fractions of the image so the overlay can be drawn on any photo. */
 export const mockOcr: OcrProvider = {
   async recognize() {
     return [
-      { text: "AFURI 原宿", confidence: 0.98 },
-      { text: "柚子塩らーめん 1,200", confidence: 0.95 },
-      { text: "餃子 600", confidence: 0.93 },
-      { text: "生ビール 700", confidence: 0.6 },
-      { text: "コーラ 300", confidence: 0.97 },
-      { text: "合計 ¥2,800", confidence: 0.99 },
+      { text: "AFURI 原宿", confidence: 0.98, box: [0.08, 0.06, 0.5, 0.07] },
+      { text: "柚子塩らーめん ¥1,200", confidence: 0.95, box: [0.08, 0.22, 0.84, 0.08] },
+      { text: "つけ麺 ¥1,350", confidence: 0.94, box: [0.08, 0.36, 0.84, 0.08] },
+      { text: "餃子 5個 ¥600", confidence: 0.93, box: [0.08, 0.5, 0.84, 0.08] },
+      { text: "チャーシュー追加 ¥300", confidence: 0.9, box: [0.08, 0.64, 0.84, 0.08] },
+      { text: "小麦・大豆・卵を含む", confidence: 0.6, box: [0.08, 0.82, 0.7, 0.06] },
     ];
   },
 };

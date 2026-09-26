@@ -18,7 +18,10 @@
       "infoPlist": {
         "NSFaceIDUsageDescription": "Voya uses Face ID to let you back in without typing your password.",
         "NSLocationWhenInUseUsageDescription": "Voya reads your location once when you choose to share it with your travelers. It is never stored.",
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSCameraUsageDescription": "Voya uses the camera to translate menus, signs and receipts. Photos are read once and never stored.",
+        "NSPhotoLibraryUsageDescription": "Voya reads a photo you choose to translate it. Nothing is uploaded or kept.",
+        "NSMicrophoneUsageDescription": "Voya uses the microphone for spoken translation when a speech module is installed."
       }
     },
     "android": {
@@ -29,7 +32,8 @@
       "permissions": [
         "USE_BIOMETRIC",
         "USE_FINGERPRINT",
-        "ACCESS_FINE_LOCATION"
+        "ACCESS_FINE_LOCATION",
+        "CAMERA"
       ]
     },
     "web": {
@@ -58,6 +62,13 @@
         "expo-location",
         {
           "locationWhenInUsePermission": "Voya reads your location once when you choose to share it with your travelers. It is never stored."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Voya reads a photo you choose to translate it. Nothing is uploaded or kept.",
+          "cameraPermission": "Voya uses the camera to translate menus, signs and receipts. Photos are read once and never stored."
         }
       ]
     ],

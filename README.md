@@ -12,7 +12,7 @@ This repo implements the [Claude Design](https://claude.ai/design) handoff (gree
 | `packages/tokens` | Design tokens (light + dark) with WCAG-AA contrast tests; generates the CSS variables and the native theme |
 | `supabase` | Postgres schema, row-level security, account deletion / data export RPCs, seed, RLS tests |
 
-## Status — build round 3 (Navigation trees)
+## Status — build round 4 (Translate + Currency)
 
 **Round 1 (foundation + core flows), done and verified:** design tokens · Supabase schema + RLS · auth (welcome, log in, create account with 16+ gate and unticked marketing consent, welcome back, reset) · Home (live map, countdown, local/home clocks, stay card, today's places, trip switcher) · Trips (list, overview, create) · Plan (day timeline, open-slot suggestions, map view) · saved place / stay details ("Take me back to my hotel", address in 日本語) · profile (theme, legal, data export, account deletion).
 
@@ -32,7 +32,15 @@ This repo implements the [Claude Design](https://claude.ai/design) handoff (gree
 
 **Landing page** — `/` is a public marketing page in the same design system: the welcome screen's world-map hero with a floating live screenshot, animated scenes built from the app's own components (trip context flowing into tools, a route drawing itself per mode, groups splitting and meeting again), real product screenshots in device frames with scroll parallax, a scroll-scrubbed paragraph, roadmap and CTA. Every animation has a still, readable resting state and switches off under "Reduce motion"; scenes carry text equivalents for screen readers. Signed-in users land on Home instead. Screenshots come from `apps/web/scripts/marketing-shots.mjs` (real OpenStreetMap tiles when reachable, a generated basemap otherwise).
 
-Scheduled for the next rounds (routes exist as honest placeholders): Translate, Currency, Split, People, Atlas Premium Pass checkout, offline states.
+**Round 4 (Translate + Currency), done and verified on web and mobile:**
+
+- **Translate** (mockup 4a/4c) — the language bar opens on the trip's language ("Suggested for Japan"), the box auto-translates after a pause (500-character counter), the green result card has Speak (speech synthesis / `expo-speech`), Copy and Save phrase. Saved phrases are trip-scoped chips (`phrases` table with RLS, seeded with "Where is the station?", "No peanuts, please", "Table for four"); a chip reloads its translation offline. "From your trip" links the hotel address for a driver, tonight's dinner, a ready-made question for the next planned place, and the camera. Results outside the offline phrasebook are labelled as demo output rather than passed off as a translation.
+- **Conversation** — the top half is rotated 180° toward the other person and labelled in their language ("聞いています" / "タップして話す"), each side has a mic (Web Speech API where the browser has it) and a typed fallback, turns are translated both ways and read aloud, "Auto-detect" decides which side typed from the script, and a transcript lists every turn.
+- **Camera** — take or choose a photo; the server (web) or device (mobile) runs OCR and translates each line, keeping prices as numbers. Overlay draws chips over the photo at the recognised boxes; Text lists lines with the price in the trip currency and the home equivalent. A bundled sample menu works without a camera. Photos are never stored. "Live" is marked Soon; "Send to Split" waits for round 5.
+- **Show to driver** (mockup 4b) — from a place page or Translate: "ここまでお願いします" with the local-script name, address and phone on a dark card, English underneath, Speak, Enlarge, Show map (drive directions).
+- **Currency** (mockup 4b/4c) — home → trip currency with the mid-market rate and "Updated 2 min ago", swap, quick amounts ($1…$100, scaled for yen-like currencies), trip currency chips ("JPY", "KRW · Seoul layover", add/remove via `trip_currencies`), a keypad with Tip and % off presets, Save (kept on the device), "Common in Japan" reference prices, and a rate cache with a stale fallback so the converter keeps working offline (`createFxCache`; server-side on web, persisted per pair on mobile). Frankfurter (keyless) is one env var away from live rates.
+
+Scheduled for the next rounds (routes exist as honest placeholders): Split, People, Atlas Premium Pass checkout, offline states.
 
 ## Run it
 
@@ -57,9 +65,9 @@ The service-role key is never used by either app; the web app refuses to start i
 ## Verify
 
 ```bash
-pnpm test                          # tokens contrast (15) + core (62) + web components (9, axe) + mobile (17, RNTL)
-pnpm --filter @voya/core test:db   # migrations + seed + RLS scenarios (11) on a throwaway Postgres 16
-pnpm test:e2e                      # Playwright: 174 tests across iPhone/Android/iPad/desktop × light/dark
+pnpm test                          # tokens contrast (15) + core (80) + web components (9, axe) + mobile (27, RNTL)
+pnpm --filter @voya/core test:db   # migrations + seed + RLS scenarios (13) on a throwaway Postgres 16
+pnpm test:e2e                      # Playwright: 222 tests across iPhone/Android/iPad/desktop × light/dark
 pnpm typecheck && pnpm lint
 ```
 
@@ -72,17 +80,18 @@ The e2e suite runs against a production build in demo mode. Every screen is chec
 - **Dates:** 2027-03-15 is a Monday; the mockup's "Sat, Mar 15" was illustrative.
 - **Motion:** 3% press scale, 220 ms fades, 40 ms list stagger — all disabled under "Reduce motion".
 - **Demo mode:** in-memory data isolated per browser session; refused on production deployments (`VERCEL_ENV`/`VOYA_ENV=production`).
+- **Speech and camera:** the browser's own Web Speech API and `<input capture>` on web, `expo-speech` / `expo-image-picker` on mobile. Expo Go has no speech recognition module, so the mobile mic explains that and both sides of Conversation can type. Translation and OCR run through server actions on web (keys never reach the browser) and stay on the offline mocks on mobile until a server relay exists.
 - **Inserts mint their own ids:** creating a trip or route never uses `RETURNING` — the row's select policy depends on a membership the after-insert trigger creates, so reading it back in the same statement would be refused by RLS.
 
 ## Layout
 
 ```
-apps/web/src/app        routes: (marketing)/ landing · (auth)/* · (app)/{home,trips,plan,navigate/{route,day,tree},profile,…} · auth/actions.ts · legal/[doc]
+apps/web/src/app        routes: (marketing)/ landing · (auth)/* · (app)/{home,trips,plan,navigate/{route,day,tree},translate/{conversation,camera,driver},currency,profile,…} · auth/actions.ts · legal/[doc]
 apps/web/src/components ui primitives, shell (tab bar / rail / sidebar), map, per-feature components
 apps/web/src/proxy.ts   CSP nonce, security headers, session refresh, route protection
-apps/mobile/app         expo-router: (auth)/* · (tabs)/* · plan · place/[id] · trips/[id] · navigate/{route,day,tree}
-packages/core/src       domain.ts · schemas.ts · selectors.ts · navigate.ts · tree.ts · format.ts · providers/* · db/*
-supabase/migrations     0100 schema · 0200 RLS · 0300 account deletion & export · 0400 routes · 0500 route trees
+apps/mobile/app         expo-router: (auth)/* · (tabs)/* · plan · place/[id] · trips/[id] · navigate/{route,day,tree} · translate/{index,conversation,camera,driver} · currency
+packages/core/src       domain.ts · schemas.ts · selectors.ts · navigate.ts · tree.ts · translate.ts · money.ts · format.ts · providers/* · db/*
+supabase/migrations     0100 schema · 0200 RLS · 0300 account deletion & export · 0400 routes · 0500 route trees · 0600 phrases & trip currencies
 ```
 
 See `SECURITY.md` for the threat model and controls.

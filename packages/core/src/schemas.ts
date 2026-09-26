@@ -150,6 +150,26 @@ export const treeSchema = z.object({
 });
 export type TreeInput = z.infer<typeof treeSchema>;
 
+const langCode = z.string().regex(/^[a-z]{2,3}(-[A-Za-z]{2,4})?$/, "Use a language code");
+/** One translation request; the text limit matches the textarea counter. */
+export const translateSchema = z.object({ text: text(500), from: langCode, to: langCode });
+export type TranslateInput = z.infer<typeof translateSchema>;
+/** A saved phrase on a trip. */
+export const phraseSchema = z.object({
+  tripId: z.uuid(),
+  sourceText: text(500),
+  sourceLang: langCode,
+  targetText: text(1000),
+  targetLang: langCode,
+  romanized: text(1000, 0).nullable().default(null),
+});
+export type PhraseInput = z.infer<typeof phraseSchema>;
+export const conversionSchema = z.object({ base: iso3, quote: iso3, amount: z.number().min(0).max(1e12).default(0) });
+export type ConversionInput = z.infer<typeof conversionSchema>;
+/** An extra currency on a trip ("KRW · Seoul layover"). */
+export const tripCurrencySchema = z.object({ tripId: z.uuid(), code: iso3, label: text(60, 0).nullable().default(null) });
+export type TripCurrencyInput = z.infer<typeof tripCurrencySchema>;
+
 export const profileSchema = z.object({
   displayName: text(80),
   homeCurrency: iso3,

@@ -1,6 +1,8 @@
 import "server-only";
 import { cookies } from "next/headers";
-import { demoBundle, demoTrips, type ItineraryItem, type RouteInput, type TreeInput, type TripBundle, type TripInput, type TripListItem } from "@voya/core";
+import {
+  demoBundle, demoTrips, type ItineraryItem, type Phrase, type PhraseInput, type RouteInput, type TreeInput, type TripBundle, type TripCurrencyInput, type TripCurrencyRow, type TripInput, type TripListItem,
+} from "@voya/core";
 
 /**
  * In-memory demo data so create/assign flows work end-to-end without Supabase.
@@ -46,7 +48,7 @@ export const demoStore = {
     s.trips.push(trip);
     s.bundles.set(id, {
       trip, travelers: [{ id: crypto.randomUUID(), trip_id: id, user_id: ownerId, name: "Joe Obligar", color: "#2F5D3A", created_at: ts }],
-      categories: [], places: [], placeCategories: [], stays: [], itinerary: [], routes: [], routeStops: [], routeBranches: [], routeBranchTravelers: [],
+      categories: [], places: [], placeCategories: [], stays: [], itinerary: [], routes: [], routeStops: [], routeBranches: [], routeBranchTravelers: [], phrases: [], tripCurrencies: [],
     });
     return trip;
   },
@@ -78,6 +80,40 @@ export const demoStore = {
       for (const t of br.travelerIds) b.routeBranchTravelers.push({ branch_id: br.id, traveler_id: t, trip_id: tripId });
     }
     return id;
+  },
+
+  async addPhrase(input: PhraseInput, userId: string): Promise<Phrase | null> {
+    const b = (await state()).bundles.get(input.tripId);
+    if (!b || b.phrases.length >= 200) return null;
+    const row: Phrase = {
+      id: crypto.randomUUID(), trip_id: input.tripId, source_text: input.sourceText, source_lang: input.sourceLang, target_text: input.targetText,
+      target_lang: input.targetLang, romanized: input.romanized, sort_order: b.phrases.length, created_by: userId, created_at: new Date().toISOString(),
+    };
+    b.phrases.push(row);
+    return row;
+  },
+  async removePhrase(tripId: string, phraseId: string): Promise<boolean> {
+    const b = (await state()).bundles.get(tripId);
+    if (!b) return false;
+    const before = b.phrases.length;
+    b.phrases = b.phrases.filter((p) => p.id !== phraseId);
+    return b.phrases.length < before;
+  },
+  async addCurrency(input: TripCurrencyInput): Promise<TripCurrencyRow | null> {
+    const b = (await state()).bundles.get(input.tripId);
+    if (!b) return null;
+    const existing = b.tripCurrencies.find((c) => c.code === input.code);
+    if (existing) return existing;
+    const row: TripCurrencyRow = { trip_id: input.tripId, code: input.code, label: input.label, sort_order: b.tripCurrencies.length, created_at: new Date().toISOString() };
+    b.tripCurrencies.push(row);
+    return row;
+  },
+  async removeCurrency(tripId: string, code: string): Promise<boolean> {
+    const b = (await state()).bundles.get(tripId);
+    if (!b) return false;
+    const before = b.tripCurrencies.length;
+    b.tripCurrencies = b.tripCurrencies.filter((c) => c.code !== code);
+    return b.tripCurrencies.length < before;
   },
 
   async assignPlaceToSlot(tripId: string, itemId: string, placeId: string): Promise<ItineraryItem | null> {

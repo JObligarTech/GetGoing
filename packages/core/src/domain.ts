@@ -1,5 +1,5 @@
 import type {
-  CategoryRow, ItineraryItemRow, PlaceCategoryRow, PlaceRow, ProfileRow, RouteBranchRow, RouteBranchTravelerRow, RouteRow, RouteStopRow, StayRow, TravelerRow, TripRow,
+  CategoryRow, ItineraryItemRow, PhraseRow, PlaceCategoryRow, PlaceRow, ProfileRow, RouteBranchRow, RouteBranchTravelerRow, RouteRow, RouteStopRow, StayRow, TravelerRow, TripCurrencyRow, TripRow,
 } from "./db/database.types";
 
 export interface TripBundle {
@@ -14,7 +14,10 @@ export interface TripBundle {
   routeStops: RouteStopRow[];
   routeBranches: RouteBranchRow[];
   routeBranchTravelers: RouteBranchTravelerRow[];
+  phrases: PhraseRow[];
+  tripCurrencies: TripCurrencyRow[];
 }
+export type Phrase = PhraseRow;
 
 export type Profile = ProfileRow;
 export type Trip = TripRow;

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { z } from "zod";
-import { Bookmark, Compass, Home as HomeIcon, Languages, Phone } from "lucide-react";
+import { Bookmark, Car, Compass, Home as HomeIcon, Languages, Phone } from "lucide-react";
 import { categoriesForPlace, formatDateRange, formatTime, placeColor } from "@voya/core";
 import { Map } from "@/components/map/Map";
 import { LocalAddress } from "@/components/plan/LocalAddress";
@@ -77,6 +77,8 @@ export default async function PlacePage({ params }: { params: Promise<{ id: stri
           {place.local_address && (
             <LocalAddress label={`Show address in ${lang}`} lang={bundle.trip.local_language ?? undefined} name={place.local_name ?? place.name} address={place.local_address} icon={<IconCoin><Languages size={20} /></IconCoin>} />
           )}
+          <ListRow href={`/translate/driver?place=${place.id}`} leading={<IconCoin><Car size={20} /></IconCoin>} title="Show to driver" subtitle={`"Please take me here" in ${lang}, with the address`} chevron />
+          <ListRow href={`/translate?text=${encodeURIComponent(`Where is ${place.name}?`)}`} leading={<IconCoin><Languages size={20} /></IconCoin>} title={`Ask for ${place.name.split(" ")[0]}`} subtitle={`Translate "Where is ${place.name}?"`} chevron />
           {place.phone && <ListRow href={`tel:${place.phone}`} leading={<IconCoin><Phone size={20} /></IconCoin>} title={place.phone} subtitle="Call" />}
         </Card>
 

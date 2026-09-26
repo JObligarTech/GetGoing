@@ -1,7 +1,7 @@
-import { Compass, Grid2X2, Home, MapPin, Landmark, ListChecks, User } from "lucide-react";
+import { Compass, Grid2X2, Home, MapPin, Landmark, Languages, ListChecks, User } from "lucide-react";
 
 export interface NavItem {
-  href: "/home" | "/trips" | "/plan" | "/navigate" | "/tools" | "/currency" | "/profile";
+  href: "/home" | "/trips" | "/plan" | "/navigate" | "/tools" | "/translate" | "/currency" | "/profile";
   label: string;
   Icon: typeof Home;
   premium?: boolean;
@@ -16,18 +16,20 @@ export const PHONE_NAV: NavItem[] = [
   { href: "/profile", label: "Profile", Icon: User },
 ];
 
-/** Desktop/iPad: Home, Trips, Plan, Navigate (Premium), Currency (Premium), Profile — Translate/Split stay phone-only. */
+/** Desktop/iPad: Home, Trips, Plan, Navigate (Premium), Translate, Currency (Premium), Profile — Split stays phone-only until round 5. */
 export const DESKTOP_NAV: NavItem[] = [
   { href: "/home", label: "Home", Icon: Home },
   { href: "/trips", label: "Trips", Icon: MapPin },
   { href: "/plan", label: "Plan", Icon: ListChecks },
   { href: "/navigate", label: "Navigate", Icon: Compass, premium: true },
+  { href: "/translate", label: "Translate", Icon: Languages },
   { href: "/currency", label: "Currency", Icon: Landmark, premium: true },
   { href: "/profile", label: "Profile", Icon: User },
 ];
 
-/** On phones, Plan lives under the Trip tab; on desktop it has its own item. */
+/** On phones, Plan lives under the Trip tab and the tools under Tools; on desktop each has its own item. */
 export function isActive(pathname: string, href: string, layout: "phone" | "desktop" = "desktop"): boolean {
   if (layout === "phone" && href === "/trips" && pathname.startsWith("/plan")) return true;
+  if (layout === "phone" && href === "/tools" && ["/translate", "/currency", "/split"].some((p) => pathname.startsWith(p))) return true;
   return pathname === href || pathname.startsWith(`${href}/`);
 }

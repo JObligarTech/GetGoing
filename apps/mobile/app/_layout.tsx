@@ -26,6 +26,8 @@ function Root() {
         <Stack.Screen name="place/[id]" options={{ presentation: "card" }} />
         <Stack.Screen name="plan" />
         <Stack.Screen name="navigate" />
+        <Stack.Screen name="translate" />
+        <Stack.Screen name="currency" />
       </Stack>
     </>
   );

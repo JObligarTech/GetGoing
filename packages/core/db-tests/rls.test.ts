@@ -180,6 +180,38 @@ describe.skipIf(!url)("row level security", () => {
     await db.query(`update public.trip_members set role='editor' where trip_id=$1 and user_id=$2`, [TRIP, MALLORY]);
   });
 
+  it("phrases and trip currencies follow trip membership; the export includes them", async () => {
+    await as(ALICE);
+    await db.query(`insert into public.phrases (trip_id, source_text, source_lang, target_text, target_lang, romanized) values ($1,'Where is the station?','en','駅はどこですか？','ja','Eki wa doko desu ka?')`, [TRIP]);
+    await db.query(`insert into public.trip_currencies (trip_id, code, label) values ($1,'KRW','Seoul layover')`, [TRIP]);
+    await db.query("savepoint p1");
+    await expect(db.query(`insert into public.trip_currencies (trip_id, code) values ($1,'yen')`, [TRIP])).rejects.toMatchObject({ code: "23514" });
+    await db.query("rollback to savepoint p1");
+    const { rows: [exp] } = await db.query(`select public.export_my_data() as d`);
+    expect(exp.d.phrases).toHaveLength(1);
+    expect(exp.d.trip_currencies[0]).toMatchObject({ code: "KRW", label: "Seoul layover" });
+    // Mallory is an editor on TRIP: she reads and can add; as a viewer she can only read.
+    await as(MALLORY);
+    expect(await count(`select count(*)::int n from public.phrases where trip_id='${TRIP}'`)).toBe(1);
+    await db.query(`insert into public.phrases (trip_id, source_text, source_lang, target_text, target_lang) values ($1,'Thank you','en','ありがとうございます','ja')`, [TRIP]);
+    await as(ALICE);
+    await db.query(`update public.trip_members set role='viewer' where trip_id=$1 and user_id=$2`, [TRIP, MALLORY]);
+    await as(MALLORY);
+    expect(await count(`select count(*)::int n from public.phrases where trip_id='${TRIP}'`)).toBe(2);
+    await db.query("savepoint p2");
+    await expect(db.query(`insert into public.phrases (trip_id, source_text, source_lang, target_text, target_lang) values ($1,'Sneaky','en','x','ja')`, [TRIP])).rejects.toMatchObject({ code: "42501" });
+    await db.query("rollback to savepoint p2");
+    await expect(db.query(`delete from public.phrases where trip_id=$1`, [TRIP])).resolves.toMatchObject({ rowCount: 0 });
+    await as(ALICE);
+    await db.query(`update public.trip_members set role='editor' where trip_id=$1 and user_id=$2`, [TRIP, MALLORY]);
+  });
+
+  it("seed: Japan 2027 has three saved phrases and a Seoul layover currency", async () => {
+    await superuser();
+    expect(await count(`select count(*)::int n from public.phrases where trip_id='22222222-2222-4222-8222-222222222221'`)).toBe(3);
+    expect(await count(`select count(*)::int n from public.trip_currencies where code='KRW' and trip_id='22222222-2222-4222-8222-222222222221'`)).toBe(1);
+  });
+
   it("delete_my_account removes the user and hands trips to an editor", async () => {
     await as(ALICE);
     await db.query(`select public.delete_my_account()`);

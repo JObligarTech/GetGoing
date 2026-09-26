@@ -11,14 +11,18 @@ const buckets = new Map<string, { tokens: number; at: number }>();
 const CAPACITY = Number(process.env.VOYA_RATE_LIMIT_CAPACITY) || 8;
 const REFILL_MS = 60_000;
 
-/** `subject` (e.g. the email being signed in) narrows the bucket so shared NATs don't collide. */
-export async function checkRateLimit(scope: string, subject = ""): Promise<boolean> {
+/**
+ * `subject` (e.g. the email being signed in) narrows the bucket so shared NATs don't collide.
+ * `capacity` overrides the per-minute budget for scopes that legitimately fire more often
+ * (auto-translate while typing) — it still caps what one user can push at a paid provider.
+ */
+export async function checkRateLimit(scope: string, subject = "", capacity = CAPACITY): Promise<boolean> {
   const h = await headers();
   const ip = h.get("x-forwarded-for")?.split(",")[0]?.trim() || h.get("x-real-ip") || "local";
   const key = `${scope}:${ip}:${subject.toLowerCase()}`;
   const now = Date.now();
-  const b = buckets.get(key) ?? { tokens: CAPACITY, at: now };
-  b.tokens = Math.min(CAPACITY, b.tokens + ((now - b.at) / REFILL_MS) * CAPACITY);
+  const b = buckets.get(key) ?? { tokens: capacity, at: now };
+  b.tokens = Math.min(capacity, b.tokens + ((now - b.at) / REFILL_MS) * capacity);
   b.at = now;
   if (b.tokens < 1) { buckets.set(key, b); return false; }
   b.tokens -= 1;

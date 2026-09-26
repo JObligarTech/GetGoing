@@ -95,6 +95,12 @@ export const demoBundle: TripBundle = {
     { branch_id: BR_A, traveler_id: "t1", trip_id: T }, { branch_id: BR_A, traveler_id: "t4", trip_id: T },
     { branch_id: BR_B, traveler_id: "t2", trip_id: T }, { branch_id: BR_B, traveler_id: "t3", trip_id: T },
   ],
+  phrases: [
+    { id: "88888888-8888-4888-8888-888888888881", trip_id: T, source_text: "Where is the station?", source_lang: "en", target_text: "駅はどこですか？", target_lang: "ja", romanized: "Eki wa doko desu ka?", sort_order: 0, created_by: DEMO_USER_ID, created_at: ts },
+    { id: "88888888-8888-4888-8888-888888888882", trip_id: T, source_text: "No peanuts, please", source_lang: "en", target_text: "ピーナッツ抜きでお願いします", target_lang: "ja", romanized: "Pīnattsu nuki de onegaishimasu", sort_order: 1, created_by: DEMO_USER_ID, created_at: ts },
+    { id: "88888888-8888-4888-8888-888888888883", trip_id: T, source_text: "Table for four", source_lang: "en", target_text: "4人です", target_lang: "ja", romanized: "Yonin desu", sort_order: 2, created_by: DEMO_USER_ID, created_at: ts },
+  ],
+  tripCurrencies: [{ trip_id: T, code: "KRW", label: "KRW · Seoul layover", sort_order: 0, created_at: ts }],
 };
 
 /** Fixed "now" used by demo mode so countdowns match the mockups (12 days away). */

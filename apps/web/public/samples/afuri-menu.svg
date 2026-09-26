@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 800" width="600" height="800" role="img" aria-label="Sample ramen menu">
+  <rect width="600" height="800" fill="#F3EEE2"/>
+  <rect x="24" y="24" width="552" height="752" fill="none" stroke="#B8AE96" stroke-width="2"/>
+  <g font-family="'Hiragino Sans','Noto Sans JP','Yu Gothic',sans-serif" fill="#2A2622">
+    <text x="48" y="78" font-size="34" font-weight="700">AFURI 原宿</text>
+    <text x="48" y="120" font-size="16" fill="#7A7060">お品書き · MENU</text>
+    <line x1="48" y1="140" x2="552" y2="140" stroke="#B8AE96" stroke-width="1"/>
+    <text x="48" y="212" font-size="30">柚子塩らーめん</text><text x="552" y="212" font-size="30" text-anchor="end">¥1,200</text>
+    <text x="48" y="324" font-size="30">つけ麺</text><text x="552" y="324" font-size="30" text-anchor="end">¥1,350</text>
+    <text x="48" y="436" font-size="30">餃子 5個</text><text x="552" y="436" font-size="30" text-anchor="end">¥600</text>
+    <text x="48" y="548" font-size="30">チャーシュー追加</text><text x="552" y="548" font-size="30" text-anchor="end">¥300</text>
+    <line x1="48" y1="620" x2="552" y2="620" stroke="#B8AE96" stroke-width="1"/>
+    <text x="48" y="690" font-size="20" fill="#7A7060">小麦・大豆・卵を含む</text>
+  </g>
+</svg>

@@ -66,7 +66,7 @@ export default function Place() {
           {place.address ? <ListRow title={place.address} subtitle="Tap to copy" last={!place.local_address} /> : null}
           {place.local_address ? (
             <>
-              <ListRow onPress={() => setShowLocal((v) => !v)} accessibilityLabel={`Show address in ${lang}`} accessibilityState={{ expanded: showLocal }} leading={<IconCoin name="language-outline" />} title={`Show address in ${lang}`} trailing={<Ionicons name={showLocal ? "chevron-up" : "chevron-down"} size={18} color={t.textFaint} />} last />
+              <ListRow onPress={() => setShowLocal((v) => !v)} accessibilityLabel={`Show address in ${lang}`} accessibilityState={{ expanded: showLocal }} leading={<IconCoin name="language-outline" />} title={`Show address in ${lang}`} trailing={<Ionicons name={showLocal ? "chevron-up" : "chevron-down"} size={18} color={t.textFaint} />} />
               {showLocal && (
                 <Animated.View entering={reduce ? undefined : FadeIn.duration(200)} accessible accessibilityLanguage={bundle.trip.local_language ?? undefined} style={{ margin: 8, borderRadius: 14, backgroundColor: t.ink, padding: 20 }}>
                   <Text style={{ color: t.onInk, fontSize: 22, fontFamily: t.font.extrabold, lineHeight: 30 }}>{place.local_name ?? place.name}</Text>
@@ -75,6 +75,7 @@ export default function Place() {
               )}
             </>
           ) : null}
+          <ListRow onPress={() => router.push({ pathname: "/translate/driver", params: { place: place.id } })} leading={<IconCoin name="car-outline" />} title="Show to driver" subtitle={`"Please take me here" in ${lang}, with the address`} chevron last />
         </Card>
       </ScrollView>
     </View>

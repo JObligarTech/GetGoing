@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import {
-  DEMO_NOW, demoBundle, demoTrips, listTrips, loadTripBundle, pickActiveTrip, routeSchema, treeSchema, type RouteInput, type RouteTree, type TripBundle, type TripListItem,
+  DEMO_NOW, demoBundle, demoTrips, listTrips, loadTripBundle, phraseSchema, pickActiveTrip, routeSchema, treeSchema, tripCurrencySchema,
+  type Phrase, type PhraseInput, type RouteInput, type RouteTree, type TripBundle, type TripCurrencyRow, type TripListItem,
 } from "@voya/core";
 import { getSupabase, isDemo, prefs } from "./supabase";
 import { useSession } from "./session";
@@ -17,6 +18,11 @@ interface DataState {
   saveRoute(input: Omit<RouteInput, "tripId">): Promise<{ id: string } | { error: string }>;
   /** Create or replace a navigation tree on the active trip. */
   saveTree(tree: RouteTree): Promise<{ id: string } | { error: string }>;
+  /** Saved phrases and extra currencies live on the trip so every traveler shares them. */
+  addPhrase(input: Omit<PhraseInput, "tripId">): Promise<Phrase | { error: string }>;
+  removePhrase(id: string): Promise<{ ok: true } | { error: string }>;
+  addCurrency(code: string, label: string | null): Promise<TripCurrencyRow | { error: string }>;
+  removeCurrency(code: string): Promise<{ ok: true } | { error: string }>;
   refresh(): Promise<void>;
 }
 
@@ -135,8 +141,71 @@ export function DataProvider({ children }: { children: ReactNode }) {
     return { id };
   }, [bundle, user, demo, refresh]);
 
+  const addPhrase = useCallback<DataState["addPhrase"]>(async (input) => {
+    if (!bundle || !user) return { error: "No active trip." };
+    const parsed = phraseSchema.safeParse({ ...input, tripId: bundle.trip.id });
+    if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Check the phrase." };
+    const p = parsed.data;
+    if (bundle.phrases.some((x) => x.source_text === p.sourceText && x.target_lang === p.targetLang)) return { error: "That phrase is already saved." };
+    if (bundle.phrases.length >= 200) return { error: "A trip can hold up to 200 saved phrases." };
+    const row: Phrase = { id: crypto.randomUUID(), trip_id: p.tripId, source_text: p.sourceText, source_lang: p.sourceLang, target_text: p.targetText, target_lang: p.targetLang, romanized: p.romanized, sort_order: bundle.phrases.length, created_by: user.id, created_at: new Date().toISOString() };
+    if (isDemo) {
+      demo.bundles.get(p.tripId)?.phrases.push(row);
+    } else {
+      const { created_at: _c, ...values } = row;
+      const { error } = await (await getSupabase()).from("phrases").insert(values);
+      if (error) return { error: "Couldn't save the phrase." };
+    }
+    await refresh();
+    return row;
+  }, [bundle, user, demo, refresh]);
+
+  const removePhrase = useCallback<DataState["removePhrase"]>(async (id) => {
+    if (!bundle) return { error: "No active trip." };
+    if (isDemo) {
+      const b = demo.bundles.get(bundle.trip.id);
+      if (b) b.phrases = b.phrases.filter((x) => x.id !== id);
+    } else {
+      const { error } = await (await getSupabase()).from("phrases").delete().eq("id", id).eq("trip_id", bundle.trip.id);
+      if (error) return { error: "Couldn't remove the phrase." };
+    }
+    await refresh();
+    return { ok: true };
+  }, [bundle, demo, refresh]);
+
+  const addCurrency = useCallback<DataState["addCurrency"]>(async (code, label) => {
+    if (!bundle) return { error: "No active trip." };
+    const parsed = tripCurrencySchema.safeParse({ tripId: bundle.trip.id, code, label });
+    if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Check the currency." };
+    if (bundle.tripCurrencies.length >= 12) return { error: "Up to 12 currencies per trip." };
+    const row: TripCurrencyRow = { trip_id: parsed.data.tripId, code: parsed.data.code, label: parsed.data.label ? `${parsed.data.code} · ${parsed.data.label}` : null, sort_order: bundle.tripCurrencies.length, created_at: new Date().toISOString() };
+    if (isDemo) {
+      const b = demo.bundles.get(bundle.trip.id);
+      if (b && !b.tripCurrencies.some((c) => c.code === row.code)) b.tripCurrencies.push(row);
+    } else {
+      const { created_at: _c, ...values } = row;
+      const { error } = await (await getSupabase()).from("trip_currencies").upsert(values, { onConflict: "trip_id,code" });
+      if (error) return { error: "Couldn't add the currency." };
+    }
+    await refresh();
+    return row;
+  }, [bundle, demo, refresh]);
+
+  const removeCurrency = useCallback<DataState["removeCurrency"]>(async (code) => {
+    if (!bundle) return { error: "No active trip." };
+    if (isDemo) {
+      const b = demo.bundles.get(bundle.trip.id);
+      if (b) b.tripCurrencies = b.tripCurrencies.filter((c) => c.code !== code);
+    } else {
+      const { error } = await (await getSupabase()).from("trip_currencies").delete().eq("code", code).eq("trip_id", bundle.trip.id);
+      if (error) return { error: "Couldn't remove the currency." };
+    }
+    await refresh();
+    return { ok: true };
+  }, [bundle, demo, refresh]);
+
   const active = trips.find((t) => t.id === activeId) ?? null;
-  const value = useMemo<DataState>(() => ({ now, trips, active, bundle, loading, setActive, assignPlaceToSlot, saveRoute, saveTree, refresh }), [now, trips, active, bundle, loading, setActive, assignPlaceToSlot, saveRoute, saveTree, refresh]);
+  const value = useMemo<DataState>(() => ({ now, trips, active, bundle, loading, setActive, assignPlaceToSlot, saveRoute, saveTree, addPhrase, removePhrase, addCurrency, removeCurrency, refresh }), [now, trips, active, bundle, loading, setActive, assignPlaceToSlot, saveRoute, saveTree, addPhrase, removePhrase, addCurrency, removeCurrency, refresh]);
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 

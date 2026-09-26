@@ -88,6 +88,11 @@ export type RouteBranchRow = {
   split_after_stop_id: string; merge_mode: TravelModeDb | null; created_at: string;
 }
 export type RouteBranchTravelerRow = { branch_id: string; traveler_id: string; trip_id: string }
+export type PhraseRow = {
+  id: string; trip_id: string; source_text: string; source_lang: string; target_text: string; target_lang: string;
+  romanized: string | null; sort_order: number; created_by: string | null; created_at: string;
+}
+export type TripCurrencyRow = { trip_id: string; code: string; label: string | null; sort_order: number; created_at: string }
 
 export type Database = {
   public: {
@@ -104,6 +109,8 @@ export type Database = {
       route_stops: { Row: RouteStopRow; Insert: Insert<RouteStopRow, "id" | "sort_order" | "planned_time" | "dwell_min" | "mode" | "branch_id" | "created_at">; Update: Partial<RouteStopRow>; Relationships: [] };
       route_branches: { Row: RouteBranchRow; Insert: Insert<RouteBranchRow, "id" | "color" | "sort_order" | "merge_mode" | "created_at">; Update: Partial<RouteBranchRow>; Relationships: [] };
       route_branch_travelers: { Row: RouteBranchTravelerRow; Insert: RouteBranchTravelerRow; Update: Partial<RouteBranchTravelerRow>; Relationships: [] };
+      phrases: { Row: PhraseRow; Insert: Insert<PhraseRow, "id" | "romanized" | "sort_order" | "created_by" | "created_at">; Update: Partial<PhraseRow>; Relationships: [] };
+      trip_currencies: { Row: TripCurrencyRow; Insert: Insert<TripCurrencyRow, "label" | "sort_order" | "created_at">; Update: Partial<TripCurrencyRow>; Relationships: [] };
       itinerary_items: { Row: ItineraryItemRow; Insert: Insert<ItineraryItemRow, "id" | "place_id" | "start_time" | "end_time" | "title" | "note" | "sort_order" | "created_at">; Update: Partial<ItineraryItemRow>; Relationships: [] };
     };
     Views: Record<string, never>;

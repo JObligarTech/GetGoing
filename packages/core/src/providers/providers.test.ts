@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { createFrankfurterFx } from "./frankfurter";
-import { mockFx, mockGeocode, mockTranslation } from "./mock";
+import { mockFx, mockGeocode, mockOcr, mockTranslation } from "./mock";
 import { createNominatimGeocode } from "./nominatim";
 import { resolveProviders } from "./index";
 
@@ -14,9 +14,12 @@ describe("mock providers", () => {
     expect((await mockFx.rate("JPY", "USD")).rate).toBeCloseTo(1 / 149.7);
     await expect(mockFx.rate("XXX", "YYY")).rejects.toThrow();
   });
-  it("translation returns the canonical phrase", async () => {
+  it("translation returns the canonical phrase in both directions and flags what it can't do", async () => {
     const r = await mockTranslation.translate("Can we have separate checks, please?", "en", "ja");
     expect(r.text).toBe("別々に会計できますか？");
+    expect((await mockTranslation.translate("駅はどこですか", "ja", "en")).text).toBe("Where is the station?");
+    expect(await mockTranslation.translate("Purple monkey dishwasher", "en", "ja")).toMatchObject({ approximate: true });
+    expect((await mockOcr.recognize(new ArrayBuffer(0)))[1]).toMatchObject({ text: "柚子塩らーめん ¥1,200", box: expect.any(Array) });
   });
 });
 
