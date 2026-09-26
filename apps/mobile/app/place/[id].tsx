@@ -77,6 +77,12 @@ export default function Place() {
           ) : null}
           <ListRow onPress={() => router.push({ pathname: "/translate/driver", params: { place: place.id } })} leading={<IconCoin name="car-outline" />} title="Show to driver" subtitle={`"Please take me here" in ${lang}, with the address`} chevron last />
         </Card>
+        {!stay && (
+          <>
+            <Eyebrow>After eating</Eyebrow>
+            <Card><ListRow onPress={() => router.push({ pathname: "/split/new", params: { place: place.id } })} leading={<IconCoin name="receipt-outline" />} title="Split a bill here" subtitle="Scan the receipt · everyone from the trip is already on it" trailing={<Chip tone="premium">Atlas</Chip>} chevron last /></Card>
+          </>
+        )}
       </ScrollView>
     </View>
   );

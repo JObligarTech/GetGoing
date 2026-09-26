@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
-import { suggestLanguages, type CachedRate } from "@voya/core";
+import { activePass, suggestLanguages, type CachedRate } from "@voya/core";
 import { CameraTranslate } from "@/components/translate/CameraTranslate";
 import { Page } from "@/components/shell/Page";
 import { Button } from "@/components/ui/Button";
 import { EmptyState, PageHeader } from "@/components/ui/primitives";
 import { recognizeAction } from "@/app/(app)/translate/actions";
-import { getActiveTrip } from "@/lib/data";
+import { startBillFromLinesAction } from "@/app/(app)/split/actions";
+import { getActiveTrip, getEntitlements, now } from "@/lib/data";
 import { fx } from "@/lib/providers";
 import { requireUser } from "@/lib/session";
 
@@ -21,7 +22,8 @@ export default async function CameraPage() {
   if (active.local_currency && active.local_currency !== user.profile.home_currency) {
     try { rate = await fx.rate(active.local_currency, user.profile.home_currency); } catch { rate = null; }
   }
+  const canSplit = !!activePass(await getEntitlements(), active.id, now());
   return (
-    <CameraTranslate tripName={active.name} from={pair.to.code} to={pair.from.code} localCurrency={active.local_currency} homeCurrency={user.profile.home_currency} rate={rate} recognizeAction={recognizeAction} />
+    <CameraTranslate tripName={active.name} from={pair.to.code} to={pair.from.code} localCurrency={active.local_currency} homeCurrency={user.profile.home_currency} rate={rate} recognizeAction={recognizeAction} splitAction={canSplit ? startBillFromLinesAction : undefined} canSplit={canSplit} />
   );
 }

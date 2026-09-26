@@ -36,7 +36,8 @@ export interface FxProvider {
 
 export interface OcrLine { text: string; confidence: number; box?: [number, number, number, number] }
 export interface OcrProvider {
-  recognize(image: Blob | ArrayBuffer, opts?: { languageHints?: string[]; signal?: AbortSignal }): Promise<OcrLine[]>;
+  /** `document` is a hint for layout-aware providers (a receipt has quantities and totals); the mock uses it to pick its fixture. */
+  recognize(image: Blob | ArrayBuffer, opts?: { languageHints?: string[]; document?: "menu" | "receipt"; signal?: AbortSignal }): Promise<OcrLine[]>;
 }
 
 export interface Providers {

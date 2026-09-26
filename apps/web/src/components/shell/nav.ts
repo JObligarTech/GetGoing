@@ -1,7 +1,7 @@
-import { Compass, Grid2X2, Home, MapPin, Landmark, Languages, ListChecks, User } from "lucide-react";
+import { Compass, Grid2X2, Home, MapPin, Landmark, Languages, ListChecks, Receipt, User } from "lucide-react";
 
 export interface NavItem {
-  href: "/home" | "/trips" | "/plan" | "/navigate" | "/tools" | "/translate" | "/currency" | "/profile";
+  href: "/home" | "/trips" | "/plan" | "/navigate" | "/tools" | "/translate" | "/currency" | "/split" | "/profile";
   label: string;
   Icon: typeof Home;
   premium?: boolean;
@@ -16,7 +16,7 @@ export const PHONE_NAV: NavItem[] = [
   { href: "/profile", label: "Profile", Icon: User },
 ];
 
-/** Desktop/iPad: Home, Trips, Plan, Navigate (Premium), Translate, Currency (Premium), Profile — Split stays phone-only until round 5. */
+/** Desktop/iPad: Home, Trips, Plan, Navigate (Premium), Translate, Currency (Premium), Split (Premium), Profile. */
 export const DESKTOP_NAV: NavItem[] = [
   { href: "/home", label: "Home", Icon: Home },
   { href: "/trips", label: "Trips", Icon: MapPin },
@@ -24,6 +24,7 @@ export const DESKTOP_NAV: NavItem[] = [
   { href: "/navigate", label: "Navigate", Icon: Compass, premium: true },
   { href: "/translate", label: "Translate", Icon: Languages },
   { href: "/currency", label: "Currency", Icon: Landmark, premium: true },
+  { href: "/split", label: "Split", Icon: Receipt, premium: true },
   { href: "/profile", label: "Profile", Icon: User },
 ];
 

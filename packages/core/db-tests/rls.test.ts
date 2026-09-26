@@ -212,6 +212,108 @@ describe.skipIf(!url)("row level security", () => {
     expect(await count(`select count(*)::int n from public.trip_currencies where code='KRW' and trip_id='22222222-2222-4222-8222-222222222221'`)).toBe(1);
   });
 
+  it("invites: a guest joins by link only, becomes a member and takes over their traveler row", async () => {
+    await as(ALICE);
+    const { rows: [guest] } = await db.query(`insert into public.travelers (trip_id, name, email) values ($1,'Mallory','mallory@test.dev') returning id`, [TRIP]);
+    const { rows: [inv] } = await db.query(`insert into public.trip_invites (trip_id, traveler_id, created_by) values ($1,$2,$3) returning token`, [TRIP, guest.id, ALICE]);
+    expect(inv.token).toHaveLength(36);
+    // Nobody can pick their own token or pretend someone else created the invite.
+    await db.query("savepoint i1");
+    await expect(db.query(`insert into public.trip_invites (trip_id, created_by) values ($1,$2)`, [TRIP, MALLORY])).rejects.toMatchObject({ code: "42501" });
+    await db.query("rollback to savepoint i1");
+    // Anonymous preview shows only the trip name, inviter and guest name.
+    await as(null);
+    const { rows: [prev] } = await db.query(`select public.invite_preview($1) as p`, [inv.token]);
+    expect(prev.p).toMatchObject({ trip_name: "Alice Japan", inviter: "Alice", traveler: "Mallory", accepted: false });
+    expect(Object.keys(prev.p).sort()).toEqual(["accepted", "expires_at", "inviter", "traveler", "trip_name"]);
+    await db.query("savepoint i2");
+    await expect(db.query(`select public.accept_trip_invite($1)`, [inv.token])).rejects.toMatchObject({ code: "42501" });
+    await db.query("rollback to savepoint i2");
+    // Mallory (already an editor from earlier tests) accepts: her traveler row is now hers, the invite is spent.
+    await as(MALLORY);
+    const { rows: [acc] } = await db.query(`select public.accept_trip_invite($1) as trip`, [inv.token]);
+    expect(acc.trip).toBe(TRIP);
+    const { rows: [tr] } = await db.query(`select user_id from public.travelers where id = $1`, [guest.id]);
+    expect(tr.user_id).toBe(MALLORY);
+    await db.query("savepoint i3");
+    await expect(db.query(`select public.accept_trip_invite($1)`, [inv.token])).rejects.toMatchObject({ code: "P0002" });
+    await db.query("rollback to savepoint i3");
+  });
+
+  it("bills: save_bill writes a bill under RLS; claim links work anonymously, token-scoped, and only while open", async () => {
+    await as(ALICE);
+    const { rows: travs } = await db.query(`select id, name from public.travelers where trip_id = $1 order by created_at`, [TRIP]);
+    const P1 = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaa01", P2 = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaa02", I1 = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbb01", I2 = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbb02";
+    const bill = { merchant: "Afuri", currency: "JPY", status: "open", tax_amount: 100, tax_label: "Tax 10%", paid_by: P1 };
+    const items = [{ id: I1, name: "Ramen", qty: 2, unit_price: 1200, sort_order: 0 }, { id: I2, name: "Gyoza", qty: 1, unit_price: 600, sort_order: 1 }];
+    const people = [{ id: P1, traveler_id: travs[0].id, name: "Alice", color: "#2F5D3A" }, { id: P2, traveler_id: null, name: "Guest Gus", color: "#E0703A" }];
+    const { rows: [{ save_bill: billId }] } = await db.query(`select public.save_bill(null, $1, $2::jsonb, $3::jsonb, $4::jsonb, $5::jsonb)`, [TRIP, JSON.stringify(bill), JSON.stringify(items), JSON.stringify(people), JSON.stringify([{ item_id: I1, participant_id: P1 }])]);
+    expect(await count(`select count(*)::int n from public.bill_items where bill_id='${billId}'`)).toBe(2);
+    const { rows: [b] } = await db.query(`select paid_by, status from public.bills where id=$1`, [billId]);
+    expect(b).toEqual({ paid_by: P1, status: "open" });
+    // Tokens are issued by the database and can't be changed by a client.
+    const { rows: [gus] } = await db.query(`select claim_token from public.bill_participants where id=$1`, [P2]);
+    expect(gus.claim_token).toHaveLength(32);
+    await db.query("savepoint b1");
+    await expect(db.query(`update public.bill_participants set claim_token='chosen' where id=$1`, [P2])).rejects.toMatchObject({ code: "42501" });
+    await db.query("rollback to savepoint b1");
+    // A share can't join an item from another bill; a participant can't carry a traveler from another trip.
+    await db.query("savepoint b2");
+    await expect(db.query(`insert into public.bill_shares (item_id, participant_id, bill_id, trip_id) values ('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb1', $1, $2, $3)`, [P2, billId, TRIP])).rejects.toMatchObject({ code: "23514" });
+    await db.query("rollback to savepoint b2");
+    // The link is dead until the sender shares it.
+    await as(null);
+    const { rows: [dead] } = await db.query(`select public.bill_claim_view($1) as v`, [gus.claim_token]);
+    expect(dead.v).toBeNull();
+    await as(ALICE);
+    await db.query(`update public.bill_participants set claim_status='sent' where id=$1`, [P2]);
+    // Anonymous: the view carries first names and items only, marks the link opened; submit replaces the picks.
+    await as(null);
+    const { rows: [view] } = await db.query(`select public.bill_claim_view($1) as v`, [gus.claim_token]);
+    expect(view.v).toMatchObject({ merchant: "Afuri", currency: "JPY", sender: "Alice", you: { id: P2, name: "Guest" } });
+    expect(Object.keys(view.v)).not.toContain("trip_id");
+    expect(view.v.participants.map((p: { name: string }) => p.name)).toEqual(["Alice", "Guest"]);
+    const { rows: [after] } = await db.query(`select public.bill_claim_submit($1, $2::uuid[]) as v`, [gus.claim_token, [I2, "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb1"]]);
+    expect(after.v.shares).toEqual(expect.arrayContaining([{ item_id: I2, participant_id: P2 }]));
+    expect(after.v.shares).toHaveLength(2); // the foreign item id was ignored
+    await superuser();
+    expect((await db.query(`select claim_status from public.bill_participants where id=$1`, [P2])).rows[0].claim_status).toBe("claimed");
+    // Anonymous can't read the tables directly, and a wrong token gets nothing.
+    await as(null);
+    await db.query("savepoint b3");
+    await expect(db.query(`select count(*) from public.bill_items`)).rejects.toMatchObject({ code: "42501" });
+    await db.query("rollback to savepoint b3");
+    expect((await db.query(`select public.bill_claim_view('nope') as v`)).rows[0].v).toBeNull();
+    // Closed bills stop accepting claims.
+    await as(ALICE);
+    await db.query(`update public.bills set status='settled' where id=$1`, [billId]);
+    await as(null);
+    await db.query("savepoint b4");
+    await expect(db.query(`select public.bill_claim_submit($1, $2::uuid[])`, [gus.claim_token, [I1]])).rejects.toMatchObject({ code: "23514" });
+    await db.query("rollback to savepoint b4");
+    // Viewers read bills but can't save one; entitlements are private to their owner.
+    await as(ALICE);
+    await db.query(`update public.trip_members set role='viewer' where trip_id=$1 and user_id=$2`, [TRIP, MALLORY]);
+    await as(MALLORY);
+    expect(await count(`select count(*)::int n from public.bills where id='${billId}'`)).toBe(1);
+    await db.query("savepoint b5");
+    await expect(db.query(`select public.save_bill(null, $1, $2::jsonb, $3::jsonb, $4::jsonb, '[]'::jsonb)`, [TRIP, JSON.stringify(bill), JSON.stringify(items), JSON.stringify(people)])).rejects.toMatchObject({ code: "42501" });
+    await db.query("rollback to savepoint b5");
+    await db.query("savepoint b6");
+    await expect(db.query(`insert into public.entitlements (user_id, kind, ends_at) values ($1, 'yearly', now() + interval '1 year')`, [MALLORY])).rejects.toMatchObject({ code: "42501" });
+    await db.query("rollback to savepoint b6");
+    expect(await count(`select count(*)::int n from public.entitlements`)).toBe(0); // the seed pass belongs to the demo user, not Mallory
+    await as(ALICE);
+    await db.query(`update public.trip_members set role='editor' where trip_id=$1 and user_id=$2`, [TRIP, MALLORY]);
+  });
+
+  it("seed: the Afuri bill is mid-split and the Lisbon one is settled", async () => {
+    await superuser();
+    expect(await count(`select count(*)::int n from public.bill_shares where bill_id='99999999-9999-4999-8999-999999999991'`)).toBe(7);
+    expect((await db.query(`select status from public.bills where id='99999999-9999-4999-8999-999999999992'`)).rows[0].status).toBe("settled");
+    expect((await db.query(`select claim_status from public.bill_participants where id='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa2'`)).rows[0].claim_status).toBe("claimed");
+  });
+
   it("delete_my_account removes the user and hands trips to an editor", async () => {
     await as(ALICE);
     await db.query(`select public.delete_my_account()`);

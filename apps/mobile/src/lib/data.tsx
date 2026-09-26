@@ -1,7 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import {
-  DEMO_NOW, demoBundle, demoTrips, listTrips, loadTripBundle, phraseSchema, pickActiveTrip, routeSchema, treeSchema, tripCurrencySchema,
-  type Phrase, type PhraseInput, type RouteInput, type RouteTree, type TripBundle, type TripCurrencyRow, type TripListItem,
+  DEMO_NOW, billSchema, demoBundle, demoEntitlements, demoPastBills, demoTrips, listBills, listEntitlements, listTrips, loadTripBundle, nextTravelerColor, phraseSchema, pickActiveTrip, routeSchema,
+  travelerSchema, treeSchema, tripCurrencySchema,
+  type BillInput, type BillListItem, type EntitlementRow, type Phrase, type PhraseInput, type RouteInput, type RouteTree, type TravelerInput, type TravelerRow, type TripBundle, type TripCurrencyRow, type TripListItem,
 } from "@voya/core";
 import { getSupabase, isDemo, prefs } from "./supabase";
 import { useSession } from "./session";
@@ -23,6 +24,17 @@ interface DataState {
   removePhrase(id: string): Promise<{ ok: true } | { error: string }>;
   addCurrency(code: string, label: string | null): Promise<TripCurrencyRow | { error: string }>;
   removeCurrency(code: string): Promise<{ ok: true } | { error: string }>;
+  /** People: guests on the active trip, and invite links (the only way a guest becomes a member). */
+  addTraveler(input: Omit<TravelerInput, "tripId">): Promise<TravelerRow | { error: string }>;
+  updateTraveler(id: string, input: Omit<TravelerInput, "tripId">): Promise<TravelerRow | { error: string }>;
+  removeTraveler(id: string): Promise<{ ok: true } | { error: string }>;
+  createInvite(travelerId: string): Promise<{ url: string } | { error: string }>;
+  /** Split: bills on the active trip, claim links, and the caller's Atlas Premium Pass. */
+  entitlements: EntitlementRow[];
+  pastBills: BillListItem[];
+  saveBill(input: Omit<BillInput, "tripId">): Promise<{ id: string } | { error: string }>;
+  deleteBill(id: string): Promise<{ ok: true } | { error: string }>;
+  claimLink(billId: string, participantId: string): Promise<{ url: string } | { error: string }>;
   refresh(): Promise<void>;
 }
 
@@ -37,19 +49,27 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [bundle, setBundle] = useState<TripBundle | null>(null);
   const [loading, setLoading] = useState(true);
-  const [demo] = useState(() => ({ trips: clone(demoTrips), bundles: new Map([[demoBundle.trip.id, clone(demoBundle)]]) }));
+  const [demo] = useState(() => ({ trips: clone(demoTrips), bundles: new Map([[demoBundle.trip.id, clone(demoBundle)]]), entitlements: clone(demoEntitlements) }));
+  const [entitlements, setEntitlements] = useState<EntitlementRow[]>([]);
+  const [pastBills, setPastBills] = useState<BillListItem[]>([]);
   const now = useMemo(() => (isDemo ? DEMO_NOW : new Date()), []);
 
   /** Pure load step; callers apply the result so state changes always follow an await. */
   const load = useCallback(async () => {
-    if (!user) return { trips: [] as TripListItem[], activeId: null as string | null, bundle: null as TripBundle | null };
-    const list = isDemo ? demo.trips : await listTrips(await getSupabase());
+    if (!user) return { trips: [] as TripListItem[], activeId: null as string | null, bundle: null as TripBundle | null, entitlements: [] as EntitlementRow[], pastBills: [] as BillListItem[] };
+    // Demo data is mutated in place; fresh references on every load so screens re-render after a save.
+    const list = isDemo ? [...demo.trips] : await listTrips(await getSupabase());
     const saved = await prefs.get("activeTrip");
     const chosen = list.find((t) => t.id === saved) ?? pickActiveTrip(list, now, user.profile.home_tz);
-    const b = chosen ? (isDemo ? demo.bundles.get(chosen.id) ?? null : await loadTripBundle(await getSupabase(), chosen.id)) : null;
-    return { trips: list, activeId: chosen?.id ?? null, bundle: b };
+    const demoBundleFor = (id: string) => { const x = demo.bundles.get(id); return x ? { ...x } : null; };
+    const b = chosen ? (isDemo ? demoBundleFor(chosen.id) : await loadTripBundle(await getSupabase(), chosen.id)) : null;
+    const ents = isDemo ? demo.entitlements : await listEntitlements(await getSupabase());
+    const past = isDemo
+      ? [...[...demo.bundles.values()].flatMap((x) => x.bills.map((bill) => ({ ...bill, trip_name: x.trip.name, people: x.billParticipants.filter((p) => p.bill_id === bill.id).length }))), ...demoPastBills]
+      : await listBills(await getSupabase());
+    return { trips: list, activeId: chosen?.id ?? null, bundle: b, entitlements: ents, pastBills: past };
   }, [user, demo, now]);
-  const apply = useCallback((r: Awaited<ReturnType<typeof load>>) => { setTrips(r.trips); setActiveId(r.activeId); setBundle(r.bundle); setLoading(false); }, []);
+  const apply = useCallback((r: Awaited<ReturnType<typeof load>>) => { setTrips(r.trips); setActiveId(r.activeId); setBundle(r.bundle); setEntitlements(r.entitlements); setPastBills(r.pastBills); setLoading(false); }, []);
   const refresh = useCallback(async () => apply(await load()), [load, apply]);
 
   useEffect(() => {
@@ -204,8 +224,149 @@ export function DataProvider({ children }: { children: ReactNode }) {
     return { ok: true };
   }, [bundle, demo, refresh]);
 
+  const addTraveler = useCallback<DataState["addTraveler"]>(async (input) => {
+    if (!bundle) return { error: "No active trip." };
+    const parsed = travelerSchema.safeParse({ ...input, tripId: bundle.trip.id });
+    if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Check the details." };
+    if (bundle.travelers.length >= 50) return { error: "Up to 50 travelers per trip." };
+    const p = parsed.data, ts = new Date().toISOString();
+    const row: TravelerRow = { id: crypto.randomUUID(), trip_id: p.tripId, user_id: null, name: p.name, color: p.color ?? nextTravelerColor(bundle.travelers), created_at: ts, email: p.email, phone: p.phone, home_currency: p.homeCurrency, joining_start: p.joiningStart, joining_end: p.joiningEnd, joining_note: p.joiningNote, updated_at: ts };
+    if (isDemo) {
+      demo.bundles.get(p.tripId)?.travelers.push(row);
+      const trip = demo.trips.find((x) => x.id === p.tripId); if (trip) trip.traveler_count += 1;
+    } else {
+      const { created_at: _c, updated_at: _u, user_id: _uid, ...values } = row;
+      const { error } = await (await getSupabase()).from("travelers").insert(values);
+      if (error) return { error: "Couldn't add the traveler." };
+    }
+    await refresh();
+    return row;
+  }, [bundle, demo, refresh]);
+
+  const updateTraveler = useCallback<DataState["updateTraveler"]>(async (id, input) => {
+    if (!bundle) return { error: "No active trip." };
+    const current = bundle.travelers.find((t) => t.id === id);
+    const parsed = travelerSchema.safeParse({ ...input, tripId: bundle.trip.id });
+    if (!current || !parsed.success) return { error: parsed.success ? "Traveler not found." : parsed.error.issues[0]?.message ?? "Check the details." };
+    const p = parsed.data;
+    const values = { name: p.name, email: p.email, phone: p.phone, home_currency: p.homeCurrency, joining_start: p.joiningStart, joining_end: p.joiningEnd, joining_note: p.joiningNote, color: p.color ?? current.color };
+    if (isDemo) {
+      const t = demo.bundles.get(p.tripId)?.travelers.find((x) => x.id === id);
+      if (t) Object.assign(t, values, { updated_at: new Date().toISOString() });
+    } else {
+      const { error } = await (await getSupabase()).from("travelers").update(values).eq("id", id).eq("trip_id", p.tripId);
+      if (error) return { error: "Couldn't save the traveler." };
+    }
+    await refresh();
+    return { ...current, ...values };
+  }, [bundle, demo, refresh]);
+
+  const removeTraveler = useCallback<DataState["removeTraveler"]>(async (id) => {
+    if (!bundle) return { error: "No active trip." };
+    const t = bundle.travelers.find((x) => x.id === id);
+    if (!t) return { error: "Traveler not found." };
+    if (t.user_id) return { error: "Travelers with an account leave from their own profile." };
+    if (isDemo) {
+      const b = demo.bundles.get(bundle.trip.id);
+      if (b) { b.travelers = b.travelers.filter((x) => x.id !== id); b.routeBranchTravelers = b.routeBranchTravelers.filter((x) => x.traveler_id !== id); }
+      const trip = demo.trips.find((x) => x.id === bundle.trip.id); if (trip) trip.traveler_count -= 1;
+    } else {
+      const { error } = await (await getSupabase()).from("travelers").delete().eq("id", id).eq("trip_id", bundle.trip.id).is("user_id", null);
+      if (error) return { error: "Couldn't remove the traveler." };
+    }
+    await refresh();
+    return { ok: true };
+  }, [bundle, demo, refresh]);
+
+  const createInvite = useCallback<DataState["createInvite"]>(async (travelerId) => {
+    if (!bundle || !user) return { error: "No active trip." };
+    const t = bundle.travelers.find((x) => x.id === travelerId);
+    if (!t || t.user_id) return { error: "Only guests can be invited." };
+    const site = process.env.EXPO_PUBLIC_SITE_URL ?? "https://voya.app";
+    const existing = bundle.tripInvites.find((i) => i.traveler_id === travelerId && !i.accepted_at && new Date(i.expires_at) > new Date());
+    if (existing) return { url: `${site}/join/${existing.token}` };
+    if (isDemo) {
+      const token = Array.from(crypto.getRandomValues(new Uint8Array(18))).map((x) => x.toString(16).padStart(2, "0")).join("");
+      demo.bundles.get(bundle.trip.id)?.tripInvites.push({ token, trip_id: bundle.trip.id, traveler_id: travelerId, role: "editor", created_by: user.id, expires_at: new Date(Date.now() + 30 * 86_400_000).toISOString(), accepted_by: null, accepted_at: null, created_at: new Date().toISOString() });
+      await refresh();
+      return { url: `${site}/join/${token}` };
+    }
+    // The token is issued by the database default; members may read their trip's invites back.
+    const { data, error } = await (await getSupabase()).from("trip_invites").insert({ trip_id: bundle.trip.id, traveler_id: travelerId, created_by: user.id }).select("token").single();
+    if (error || !data) return { error: "Couldn't create the invite." };
+    await refresh();
+    return { url: `${site}/join/${data.token}` };
+  }, [bundle, user, demo, refresh]);
+
+  const saveBill = useCallback<DataState["saveBill"]>(async (input) => {
+    if (!bundle || !user) return { error: "No active trip." };
+    const parsed = billSchema.safeParse({ ...input, tripId: bundle.trip.id });
+    if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Check the bill." };
+    const b = parsed.data;
+    if (b.billId && !bundle.bills.some((x) => x.id === b.billId)) return { error: "Bill not found." };
+    if (!b.participants.every((p) => !p.travelerId || bundle.travelers.some((t) => t.id === p.travelerId))) return { error: "One of the people isn't on this trip." };
+    const oldItems = new Set(bundle.billItems.filter((i) => i.bill_id === b.billId).map((i) => i.id));
+    const oldPeople = new Map(bundle.billParticipants.filter((p) => p.bill_id === b.billId).map((p) => [p.id, p]));
+    // Rows already on this bill keep their ids (and claim tokens); the rest are minted here.
+    const itemIds = new Map(b.items.map((i) => [i.id, oldItems.has(i.id) ? i.id : crypto.randomUUID()]));
+    const peopleIds = new Map(b.participants.map((p) => [p.id, oldPeople.has(p.id) ? p.id : crypto.randomUUID()]));
+    const id = b.billId ?? crypto.randomUUID(), ts = new Date().toISOString();
+    const items = b.items.map((i, n) => ({ id: itemIds.get(i.id)!, bill_id: id, trip_id: b.tripId, name: i.name, local_name: i.localName, qty: i.qty, unit_price: i.unitPrice, confidence: i.confidence, sort_order: n, created_at: ts }));
+    const people = b.participants.map((p) => { const prev = oldPeople.get(p.id); return { id: peopleIds.get(p.id)!, bill_id: id, trip_id: b.tripId, traveler_id: p.travelerId, name: p.name, color: p.color, home_currency: p.homeCurrency, claim_token: prev?.claim_token ?? Array.from(crypto.getRandomValues(new Uint8Array(16))).map((x) => x.toString(16).padStart(2, "0")).join(""), claim_status: prev?.claim_status ?? ("none" as const), claim_expires_at: prev?.claim_expires_at ?? new Date(Date.now() + 30 * 86_400_000).toISOString(), created_at: prev?.created_at ?? ts }; });
+    const shares = b.shares.map((s) => ({ item_id: itemIds.get(s.itemId)!, participant_id: peopleIds.get(s.participantId)!, bill_id: id, trip_id: b.tripId }));
+    const paidBy = b.paidBy ? peopleIds.get(b.paidBy)! : null;
+    if (isDemo) {
+      const db = demo.bundles.get(b.tripId)!;
+      const old = db.bills.find((x) => x.id === id);
+      db.bills = [{ id, trip_id: b.tripId, place_id: b.placeId, merchant: b.merchant, currency: b.currency, status: b.status, bill_date: b.billDate, tax_amount: b.taxAmount, tax_label: b.taxLabel, service_amount: b.serviceAmount, discount_amount: b.discountAmount, rounding_unit: b.roundingUnit, tax_mode: b.taxMode, paid_by: paidBy, receipt_pages: old?.receipt_pages ?? 0, created_by: old?.created_by ?? user.id, created_at: old?.created_at ?? ts, updated_at: ts, closed_at: b.status === "settled" ? old?.closed_at ?? ts : null }, ...db.bills.filter((x) => x.id !== id)];
+      db.billItems = [...db.billItems.filter((x) => x.bill_id !== id), ...items];
+      db.billParticipants = [...db.billParticipants.filter((x) => x.bill_id !== id), ...people];
+      db.billShares = [...db.billShares.filter((x) => x.bill_id !== id), ...shares];
+    } else {
+      const { error } = await (await getSupabase()).rpc("save_bill", {
+        p_bill_id: b.billId, p_trip_id: b.tripId,
+        p_bill: { place_id: b.placeId, merchant: b.merchant, currency: b.currency, status: b.status, bill_date: b.billDate, tax_amount: b.taxAmount, tax_label: b.taxLabel, service_amount: b.serviceAmount, discount_amount: b.discountAmount, rounding_unit: b.roundingUnit, tax_mode: b.taxMode, paid_by: paidBy },
+        p_items: items.map((i) => ({ id: i.id, name: i.name, local_name: i.local_name, qty: i.qty, unit_price: i.unit_price, confidence: i.confidence, sort_order: i.sort_order })),
+        p_participants: people.map((p) => ({ id: p.id, traveler_id: p.traveler_id, name: p.name, color: p.color, home_currency: p.home_currency })),
+        p_shares: shares.map((s) => ({ item_id: s.item_id, participant_id: s.participant_id })),
+      });
+      if (error) return { error: "Couldn't save the bill." };
+    }
+    await refresh();
+    return { id };
+  }, [bundle, user, demo, refresh]);
+
+  const deleteBill = useCallback<DataState["deleteBill"]>(async (id) => {
+    if (!bundle) return { error: "No active trip." };
+    if (isDemo) {
+      const db = demo.bundles.get(bundle.trip.id);
+      if (db) { db.bills = db.bills.filter((x) => x.id !== id); db.billItems = db.billItems.filter((x) => x.bill_id !== id); db.billParticipants = db.billParticipants.filter((x) => x.bill_id !== id); db.billShares = db.billShares.filter((x) => x.bill_id !== id); }
+    } else {
+      const { error } = await (await getSupabase()).from("bills").delete().eq("id", id).eq("trip_id", bundle.trip.id);
+      if (error) return { error: "Couldn't delete the bill." };
+    }
+    await refresh();
+    return { ok: true };
+  }, [bundle, demo, refresh]);
+
+  const claimLink = useCallback<DataState["claimLink"]>(async (billId, participantId) => {
+    if (!bundle) return { error: "No active trip." };
+    const site = process.env.EXPO_PUBLIC_SITE_URL ?? "https://voya.app";
+    const p = bundle.billParticipants.find((x) => x.id === participantId && x.bill_id === billId);
+    if (!p?.claim_token) return { error: "Couldn't create the link." };
+    if (isDemo) {
+      const dp = demo.bundles.get(bundle.trip.id)?.billParticipants.find((x) => x.id === participantId);
+      if (dp && dp.claim_status === "none") dp.claim_status = "sent";
+    } else if (p.claim_status === "none") {
+      const { error } = await (await getSupabase()).from("bill_participants").update({ claim_status: "sent" }).eq("id", participantId).eq("trip_id", bundle.trip.id);
+      if (error) return { error: "Couldn't create the link." };
+    }
+    await refresh();
+    return { url: `${site}/s/${p.claim_token}` };
+  }, [bundle, demo, refresh]);
+
   const active = trips.find((t) => t.id === activeId) ?? null;
-  const value = useMemo<DataState>(() => ({ now, trips, active, bundle, loading, setActive, assignPlaceToSlot, saveRoute, saveTree, addPhrase, removePhrase, addCurrency, removeCurrency, refresh }), [now, trips, active, bundle, loading, setActive, assignPlaceToSlot, saveRoute, saveTree, addPhrase, removePhrase, addCurrency, removeCurrency, refresh]);
+  const value = useMemo<DataState>(() => ({ now, trips, active, bundle, loading, entitlements, pastBills, setActive, assignPlaceToSlot, saveRoute, saveTree, addPhrase, removePhrase, addCurrency, removeCurrency, addTraveler, updateTraveler, removeTraveler, createInvite, saveBill, deleteBill, claimLink, refresh }), [now, trips, active, bundle, loading, entitlements, pastBills, setActive, assignPlaceToSlot, saveRoute, saveTree, addPhrase, removePhrase, addCurrency, removeCurrency, addTraveler, updateTraveler, removeTraveler, createInvite, saveBill, deleteBill, claimLink, refresh]);
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 

@@ -28,6 +28,8 @@ function Root() {
         <Stack.Screen name="navigate" />
         <Stack.Screen name="translate" />
         <Stack.Screen name="currency" />
+        <Stack.Screen name="split" />
+        <Stack.Screen name="people" />
       </Stack>
     </>
   );

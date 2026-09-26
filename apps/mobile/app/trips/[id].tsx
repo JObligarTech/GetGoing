@@ -2,9 +2,10 @@ import { Pressable, ScrollView, Text, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { formatDateRange, pluralize, tripDates, tripPhaseLabel } from "@voya/core";
-import { Button, Card, Chip, EmptyState, Eyebrow, ListRow, Tile, screenStyles } from "@/components/ui";
+import { formatDateRange, pluralize, travelerDetail, tripDates, tripPhaseLabel } from "@voya/core";
+import { Button, Card, Chip, EmptyState, Eyebrow, IconCoin, ListRow, Tile, screenStyles } from "@/components/ui";
 import { useData } from "@/lib/data";
+import { useSession } from "@/lib/session";
 import { useTheme } from "@/lib/theme";
 
 export default function Trip() {
@@ -14,6 +15,7 @@ export default function Trip() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { now, trips, active, bundle, setActive } = useData();
+  const { user } = useSession();
   const trip = trips.find((x) => x.id === id);
   if (!trip) return <View style={s.screen}><View style={[s.content, { paddingTop: insets.top + 8 }]}><EmptyState title="Trip not found" action={<Button variant="secondary" label="Back" onPress={() => router.back()} />} /></View></View>;
   const isActive = trip.id === active?.id;
@@ -45,7 +47,8 @@ export default function Trip() {
           <>
             <Eyebrow>{pluralize(b.travelers.length, "traveler")}</Eyebrow>
             <Card>
-              {b.travelers.map((tr, i) => <ListRow key={tr.id} last={i === b.travelers.length - 1} leading={<Tile name={tr.name} size={36} radius={18} color={tr.color} />} title={tr.name} subtitle={tr.user_id ? "Voya account" : "No account needed"} />)}
+              {b.travelers.map((tr) => <ListRow key={tr.id} onPress={() => router.push("/people")} leading={<Tile name={tr.name} size={36} radius={18} color={tr.color} />} title={tr.name} subtitle={travelerDetail(tr, b.trip, user?.id ?? null, user?.profile.home_currency)} />)}
+              <ListRow onPress={() => router.push("/people")} leading={<IconCoin name="person-add-outline" />} title="Add traveler" subtitle="Guests don't need an account" chevron last />
             </Card>
           </>
         )}

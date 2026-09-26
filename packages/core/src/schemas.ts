@@ -170,6 +170,66 @@ export type ConversionInput = z.infer<typeof conversionSchema>;
 export const tripCurrencySchema = z.object({ tripId: z.uuid(), code: iso3, label: text(60, 0).nullable().default(null) });
 export type TripCurrencyInput = z.infer<typeof tripCurrencySchema>;
 
+/** A traveler (guest or account) on a trip. */
+export const travelerSchema = z
+  .object({
+    tripId: z.uuid(),
+    name: text(80),
+    email: emailSchema.nullable().default(null),
+    phone: text(40, 0).nullable().default(null),
+    homeCurrency: iso3.nullable().default(null),
+    joiningStart: dateStr.nullable().default(null),
+    joiningEnd: dateStr.nullable().default(null),
+    joiningNote: text(80, 0).nullable().default(null),
+    color: hex.optional(),
+  })
+  .refine((v) => !v.joiningStart || !v.joiningEnd || v.joiningStart <= v.joiningEnd, { path: ["joiningEnd"], message: "End must be after start" });
+export type TravelerInput = z.infer<typeof travelerSchema>;
+
+const money = z.number().min(0).max(1e9);
+const billItem = z.object({
+  id: shortId,
+  name: text(120),
+  localName: text(120, 0).nullable().default(null),
+  qty: z.number().int().min(1).max(99).default(1),
+  unitPrice: money,
+  confidence: z.number().min(0).max(1).nullable().default(null),
+});
+const billParticipant = z.object({
+  id: shortId,
+  // Traveler ids are uuids in the database and short ids in the demo dataset; the action checks them against the trip either way.
+  travelerId: shortId.nullable().default(null),
+  name: text(80),
+  color: hex.default("#2F5D3A"),
+  homeCurrency: iso3.nullable().default(null),
+});
+/** A whole bill as the editor sends it; row ids are re-minted server-side except for existing rows. */
+export const billSchema = z.object({
+  billId: z.uuid().nullable().default(null),
+  tripId: z.uuid(),
+  placeId: z.uuid().nullable().default(null),
+  merchant: text(120),
+  currency: iso3,
+  billDate: dateStr.nullable().default(null),
+  taxAmount: money.default(0),
+  taxLabel: text(40, 0).nullable().default(null),
+  serviceAmount: money.default(0),
+  discountAmount: money.default(0),
+  roundingUnit: z.number().min(0.01).max(1000).default(1),
+  taxMode: z.enum(["proportional", "even"]).default("proportional"),
+  paidBy: shortId.nullable().default(null),
+  status: z.enum(["draft", "open", "settled"]).default("draft"),
+  items: z.array(billItem).min(1).max(80),
+  participants: z.array(billParticipant).min(1).max(30),
+  shares: z.array(z.object({ itemId: shortId, participantId: shortId })).max(2400),
+}).superRefine((b, ctx) => {
+  const items = new Set(b.items.map((i) => i.id)), people = new Set(b.participants.map((p) => p.id));
+  if (items.size !== b.items.length || people.size !== b.participants.length) ctx.addIssue({ code: "custom", message: "Duplicate ids", path: ["items"] });
+  for (const s of b.shares) if (!items.has(s.itemId) || !people.has(s.participantId)) ctx.addIssue({ code: "custom", message: "Share refers to a missing item or person", path: ["shares"] });
+  if (b.paidBy && !people.has(b.paidBy)) ctx.addIssue({ code: "custom", message: "Payer must be on the bill", path: ["paidBy"] });
+});
+export type BillInput = z.infer<typeof billSchema>;
+
 export const profileSchema = z.object({
   displayName: text(80),
   homeCurrency: iso3,

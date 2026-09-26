@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { z } from "zod";
-import { Bookmark, Car, Compass, Home as HomeIcon, Languages, Phone } from "lucide-react";
+import { Bookmark, Car, Compass, Home as HomeIcon, Languages, Phone, Receipt } from "lucide-react";
 import { categoriesForPlace, formatDateRange, formatTime, placeColor } from "@voya/core";
 import { Map } from "@/components/map/Map";
 import { LocalAddress } from "@/components/plan/LocalAddress";
@@ -81,6 +81,12 @@ export default async function PlacePage({ params }: { params: Promise<{ id: stri
           <ListRow href={`/translate?text=${encodeURIComponent(`Where is ${place.name}?`)}`} leading={<IconCoin><Languages size={20} /></IconCoin>} title={`Ask for ${place.name.split(" ")[0]}`} subtitle={`Translate "Where is ${place.name}?"`} chevron />
           {place.phone && <ListRow href={`tel:${place.phone}`} leading={<IconCoin><Phone size={20} /></IconCoin>} title={place.phone} subtitle="Call" />}
         </Card>
+        {!stay && (
+          <>
+            <SectionHeader title="After eating" />
+            <Card><ListRow href={`/split/new?place=${place.id}`} leading={<IconCoin><Receipt size={20} /></IconCoin>} title="Split a bill here" subtitle="Scan the receipt · everyone from the trip is already on it" trailing={<Chip tone="premium">Atlas</Chip>} chevron /></Card>
+          </>
+        )}
 
         {place.notes && (<><SectionHeader title="Notes" /><Card className="px-3.5 py-3 text-[14px] whitespace-pre-wrap">{place.notes}</Card></>)}
         <Button href="/plan" variant="ghost">Back to Plan</Button>

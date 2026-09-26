@@ -26,7 +26,7 @@ export type TripListItem = Awaited<ReturnType<typeof listTrips>>[number];
 
 /** Everything the Home/Plan screens need for one trip, in one round-trip each. */
 export async function loadTripBundle(db: VoyaClient, tripId: string): Promise<TripBundle | null> {
-  const [trip, travelers, categories, places, placeCats, stays, items, routes, routeStops, branches, branchTravelers, phrases, currencies] = await Promise.all([
+  const [trip, travelers, categories, places, placeCats, stays, items, routes, routeStops, branches, branchTravelers, phrases, currencies, invites, bills, billItems, billParticipants, billShares] = await Promise.all([
     db.from("trips").select("*").eq("id", tripId).maybeSingle(),
     db.from("travelers").select("*").eq("trip_id", tripId).order("created_at"),
     db.from("categories").select("*").eq("trip_id", tripId).order("sort_order"),
@@ -40,8 +40,13 @@ export async function loadTripBundle(db: VoyaClient, tripId: string): Promise<Tr
     db.from("route_branch_travelers").select("*").eq("trip_id", tripId),
     db.from("phrases").select("*").eq("trip_id", tripId).order("sort_order").order("created_at"),
     db.from("trip_currencies").select("*").eq("trip_id", tripId).order("sort_order"),
+    db.from("trip_invites").select("*").eq("trip_id", tripId).is("accepted_at", null),
+    db.from("bills").select("*").eq("trip_id", tripId).order("created_at", { ascending: false }),
+    db.from("bill_items").select("*").eq("trip_id", tripId).order("sort_order"),
+    db.from("bill_participants").select("*").eq("trip_id", tripId).order("created_at"),
+    db.from("bill_shares").select("*").eq("trip_id", tripId),
   ]);
-  for (const r of [trip, travelers, categories, places, placeCats, stays, items, routes, routeStops, branches, branchTravelers, phrases, currencies]) if (r.error) throw r.error;
+  for (const r of [trip, travelers, categories, places, placeCats, stays, items, routes, routeStops, branches, branchTravelers, phrases, currencies, invites, bills, billItems, billParticipants, billShares]) if (r.error) throw r.error;
   if (!trip.data) return null;
   return {
     trip: trip.data,
@@ -57,8 +62,29 @@ export async function loadTripBundle(db: VoyaClient, tripId: string): Promise<Tr
     routeBranchTravelers: branchTravelers.data ?? [],
     phrases: phrases.data ?? [],
     tripCurrencies: currencies.data ?? [],
+    tripInvites: invites.data ?? [],
+    bills: bills.data ?? [],
+    billItems: billItems.data ?? [],
+    billParticipants: billParticipants.data ?? [],
+    billShares: billShares.data ?? [],
   };
 }
+
+/** The caller's Atlas Premium Pass entitlements (RLS: own rows only). */
+export async function listEntitlements(db: VoyaClient) {
+  const { data, error } = await db.from("entitlements").select("*").order("ends_at", { ascending: false });
+  if (error) throw error;
+  return data ?? [];
+}
+
+/** Bills across every trip the caller can see, newest first — the Split hub's "Past splits". */
+export async function listBills(db: VoyaClient) {
+  const { data, error } = await db.from("bills").select("*, trips(name), bill_participants(id)").order("created_at", { ascending: false }).limit(50);
+  if (error) throw error;
+  const rows = (data ?? []) as unknown as (import("./database.types").BillRow & { trips: { name: string } | null; bill_participants: { id: string }[] })[];
+  return rows.map(({ trips, bill_participants, ...b }) => ({ ...b, trip_name: trips?.name ?? "Trip", people: bill_participants.length }));
+}
+export type BillListItem = Awaited<ReturnType<typeof listBills>>[number];
 
 export async function getProfile(db: VoyaClient, userId: string) {
   const { data, error } = await db.from("profiles").select("*").eq("id", userId).maybeSingle();

@@ -22,7 +22,7 @@ export default function Tools() {
         <Card>
           <ListRow onPress={() => router.push("/translate")} leading={<IconCoin name="language-outline" />} title="Translate" subtitle={`${pair.to.native} ready · text, voice, camera`} chevron />
           <ListRow onPress={() => router.push("/currency")} leading={<IconCoin name="cash-outline" />} title="Currency" subtitle={active?.local_currency ? `${user?.profile.home_currency ?? "USD"} ⇄ ${active.local_currency}` : "Set a trip currency"} trailing={<Chip tone="premium">Premium</Chip>} chevron />
-          <ListRow onPress={() => router.push("/(tabs)/navigate")} leading={<IconCoin name="receipt-outline" />} title="Split" subtitle="Scan a receipt, assign items · next round" trailing={<Chip tone="premium">Premium</Chip>} chevron last />
+          <ListRow onPress={() => router.push("/split")} leading={<IconCoin name="receipt-outline" />} title="Split" subtitle="Scan a receipt · friends claim by link" trailing={<Chip tone="premium">Premium</Chip>} chevron last />
         </Card>
       </ScrollView>
     </View>

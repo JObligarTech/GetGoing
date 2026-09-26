@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { z } from "zod";
 import { Home as HomeIcon, Users } from "lucide-react";
-import { formatDateRange, formatTime, placeById, pluralize, tripDates, tripPhaseLabel } from "@voya/core";
+import { formatDateRange, formatTime, placeById, pluralize, travelerDetail, tripDates, tripPhaseLabel } from "@voya/core";
 import { Page } from "@/components/shell/Page";
 import { Button } from "@/components/ui/Button";
 import { FadeIn } from "@/components/ui/Motion";
@@ -68,12 +68,12 @@ export default async function TripPage({ params }: { params: Promise<{ id: strin
           }) : <ListRow title="No stay saved" subtitle="Add your hotel so 'Take me back to my hotel' works everywhere." />}
         </Card>
 
-        <SectionHeader title={pluralize(travelers.length, "traveler")} />
+        <SectionHeader title={pluralize(travelers.length, "traveler")} action={<Button href={`/trips/${trip.id}/people`} variant="ghost" size="sm" className="h-auto min-h-0 px-1 text-[13px]">People</Button>} />
         <Card className="divide-y divide-line">
           {travelers.map((t) => (
-            <ListRow key={t.id} leading={<Tile name={t.name} size={36} radius={999} color={t.color} />} title={t.name} subtitle={t.user_id ? "Voya account" : "No account needed"} />
+            <ListRow key={t.id} href={`/trips/${trip.id}/people`} leading={<Tile name={t.name} size={36} radius={999} color={t.color} />} title={t.name} subtitle={travelerDetail(t, trip, user.id, user.profile.home_currency)} />
           ))}
-          <ListRow leading={<IconCoin size={36}><Users size={18} /></IconCoin>} title="Add traveler" subtitle="Coming in the People round" />
+          <ListRow href={`/trips/${trip.id}/people`} leading={<IconCoin size={36}><Users size={18} /></IconCoin>} title="Add traveler" subtitle="Guests don't need an account" chevron />
         </Card>
 
         <SectionHeader title={pluralize(places.length, "saved place")} action={<Button href="/plan" variant="ghost" size="sm" className="h-auto min-h-0 px-1 text-[13px]">Open Plan</Button>} />

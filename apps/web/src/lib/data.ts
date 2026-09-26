@@ -1,7 +1,7 @@
 import "server-only";
 import { cache } from "react";
 import { cookies } from "next/headers";
-import { DEMO_NOW, listTrips, loadTripBundle, pickActiveTrip, type TripBundle, type TripListItem } from "@voya/core";
+import { DEMO_NOW, demoEntitlements, listBills, listEntitlements, listTrips, loadTripBundle, pickActiveTrip, type BillListItem, type EntitlementRow, type TripBundle, type TripListItem } from "@voya/core";
 import { demoStore } from "@/lib/demo-store";
 import { isDemo } from "@/lib/env";
 import { createServerSupabase } from "@/lib/supabase/server";
@@ -30,4 +30,18 @@ export const getActiveTrip = cache(async (homeTz = "UTC"): Promise<TripListItem 
   const trips = await getTrips();
   const chosen = (await cookies()).get(ACTIVE_TRIP_COOKIE)?.value;
   return trips.find((t) => t.id === chosen) ?? pickActiveTrip(trips, now(), homeTz);
+});
+
+/** The caller's Atlas Premium Pass entitlements. */
+export const getEntitlements = cache(async (): Promise<EntitlementRow[]> => {
+  if (isDemo) return demoEntitlements;
+  const db = await createServerSupabase();
+  return listEntitlements(db);
+});
+
+/** Bills across every trip the caller can see (the Split hub's history). */
+export const getAllBills = cache(async (): Promise<BillListItem[]> => {
+  if (isDemo) return demoStore.listBills();
+  const db = await createServerSupabase();
+  return listBills(db);
 });

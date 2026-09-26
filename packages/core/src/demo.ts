@@ -3,7 +3,7 @@
  * without Supabase (e2e tests, Storybook-style previews, Expo Go without keys).
  */
 import type { TripBundle } from "./domain";
-import type { ProfileRow, TripRow } from "./db/database.types";
+import type { EntitlementRow, ProfileRow, TravelerRow, TripRow } from "./db/database.types";
 
 export const DEMO_USER_ID = "11111111-1111-4111-8111-111111111111";
 export const DEMO_TRIP_ID = "22222222-2222-4222-8222-222222222221";
@@ -29,6 +29,10 @@ const T = DEMO_TRIP_ID;
 const P = (n: number) => `44444444-4444-4444-8444-44444444444${n}`;
 const C = (n: number) => `33333333-3333-4333-8333-33333333333${n}`;
 const TREE = "55555555-5555-4555-8555-555555555553", BR_A = "77777777-7777-4777-8777-777777777771", BR_B = "77777777-7777-4777-8777-777777777772";
+const traveler: TravelerRow = { id: "", trip_id: T, user_id: null, name: "", color: "#2F5D3A", created_at: ts, email: null, phone: null, home_currency: null, joining_start: null, joining_end: null, joining_note: null, updated_at: ts };
+export const AFURI_BILL = "99999999-9999-4999-8999-999999999991";
+const BP = (n: number) => `aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa${n}`;
+const BI = (n: number) => `bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb${n}`;
 const place = (id: string, name: string, local_name: string, address: string, local_address: string, lat: number, lng: number, priority: "must" | "maybe" = "maybe") => ({
   id, trip_id: T, name, local_name, address, local_address, lat, lng, provider: "manual", provider_ref: null, phone: null, website: null,
   hours: null, notes: null, priority, created_by: DEMO_USER_ID, created_at: ts, updated_at: ts,
@@ -37,10 +41,10 @@ const place = (id: string, name: string, local_name: string, address: string, lo
 export const demoBundle: TripBundle = {
   trip: demoTrips[0]!,
   travelers: [
-    { id: "t1", trip_id: T, user_id: DEMO_USER_ID, name: "Joe Obligar", color: "#2F5D3A", created_at: ts },
-    { id: "t2", trip_id: T, user_id: null, name: "Chris", color: "#E0703A", created_at: ts },
-    { id: "t3", trip_id: T, user_id: null, name: "Daniel", color: "#5568C9", created_at: ts },
-    { id: "t4", trip_id: T, user_id: null, name: "Sarah", color: "#C9516F", created_at: ts },
+    { ...traveler, id: "t1", user_id: DEMO_USER_ID, name: "Joe Obligar", color: "#2F5D3A" },
+    { ...traveler, id: "t2", name: "Chris", color: "#E0703A", email: "chris@example.com" },
+    { ...traveler, id: "t3", name: "Daniel", color: "#5568C9", home_currency: "CAD", joining_start: "2027-03-15", joining_end: "2027-03-20", joining_note: "Tokyo only" },
+    { ...traveler, id: "t4", name: "Sarah", color: "#C9516F", phone: "+1 415 555 0142" },
   ],
   categories: [
     { id: C(4), trip_id: T, name: "Must visit", icon: "star", color: "#2F5D3A", sort_order: 0, created_at: ts },
@@ -101,7 +105,39 @@ export const demoBundle: TripBundle = {
     { id: "88888888-8888-4888-8888-888888888883", trip_id: T, source_text: "Table for four", source_lang: "en", target_text: "4人です", target_lang: "ja", romanized: "Yonin desu", sort_order: 2, created_by: DEMO_USER_ID, created_at: ts },
   ],
   tripCurrencies: [{ trip_id: T, code: "KRW", label: "KRW · Seoul layover", sort_order: 0, created_at: ts }],
+  tripInvites: [],
+  // Tonight's dinner, mid-split: Joe paid, Chris claimed by link, Daniel opened his link, Coke still unassigned (mockup 5b).
+  bills: [{ id: AFURI_BILL, trip_id: T, place_id: P(5), merchant: "Afuri Ramen Harajuku", currency: "JPY", status: "open", bill_date: "2027-03-15", tax_amount: 605, tax_label: "Tax 10%", service_amount: 0, discount_amount: 0, rounding_unit: 1, tax_mode: "proportional", paid_by: BP(1), receipt_pages: 2, created_by: DEMO_USER_ID, created_at: "2027-03-15T10:50:00Z", updated_at: "2027-03-15T10:55:00Z", closed_at: null }],
+  billItems: [
+    { id: BI(1), bill_id: AFURI_BILL, trip_id: T, name: "Yuzu Shio Ramen", local_name: "柚子塩らーめん", qty: 2, unit_price: 1200, confidence: 0.96, sort_order: 0, created_at: ts },
+    { id: BI(2), bill_id: AFURI_BILL, trip_id: T, name: "Gyoza", local_name: "餃子", qty: 1, unit_price: 600, confidence: 0.95, sort_order: 1, created_at: ts },
+    { id: BI(3), bill_id: AFURI_BILL, trip_id: T, name: "Draft beer", local_name: "生ビール", qty: 2, unit_price: 700, confidence: 0.93, sort_order: 2, created_at: ts },
+    { id: BI(4), bill_id: AFURI_BILL, trip_id: T, name: "Coke", local_name: "コーラ", qty: 1, unit_price: 300, confidence: 0.97, sort_order: 3, created_at: ts },
+    { id: BI(5), bill_id: AFURI_BILL, trip_id: T, name: "Tsukemen", local_name: "つけ麺", qty: 1, unit_price: 1350, confidence: 0.55, sort_order: 4, created_at: ts },
+  ],
+  billParticipants: [
+    { id: BP(1), bill_id: AFURI_BILL, trip_id: T, traveler_id: "t1", name: "Joe", color: "#2F5D3A", home_currency: "USD", claim_token: null, claim_status: "none", claim_expires_at: "2027-04-14T10:50:00Z", created_at: ts },
+    { id: BP(2), bill_id: AFURI_BILL, trip_id: T, traveler_id: "t2", name: "Chris", color: "#E0703A", home_currency: "USD", claim_token: "k8fq2demo0000000000000000chris01", claim_status: "claimed", claim_expires_at: "2027-04-14T10:50:00Z", created_at: ts },
+    { id: BP(3), bill_id: AFURI_BILL, trip_id: T, traveler_id: "t3", name: "Daniel", color: "#5568C9", home_currency: "CAD", claim_token: "k8fq2demo000000000000000daniel01", claim_status: "opened", claim_expires_at: "2027-04-14T10:50:00Z", created_at: ts },
+    { id: BP(4), bill_id: AFURI_BILL, trip_id: T, traveler_id: "t4", name: "Sarah", color: "#C9516F", home_currency: "USD", claim_token: null, claim_status: "none", claim_expires_at: "2027-04-14T10:50:00Z", created_at: ts },
+  ],
+  billShares: [
+    { item_id: BI(1), participant_id: BP(1), bill_id: AFURI_BILL, trip_id: T }, { item_id: BI(1), participant_id: BP(4), bill_id: AFURI_BILL, trip_id: T },
+    { item_id: BI(2), participant_id: BP(1), bill_id: AFURI_BILL, trip_id: T }, { item_id: BI(2), participant_id: BP(2), bill_id: AFURI_BILL, trip_id: T },
+    { item_id: BI(3), participant_id: BP(1), bill_id: AFURI_BILL, trip_id: T }, { item_id: BI(3), participant_id: BP(3), bill_id: AFURI_BILL, trip_id: T },
+    { item_id: BI(5), participant_id: BP(2), bill_id: AFURI_BILL, trip_id: T },
+  ],
 };
+
+/** The demo account holds a yearly Atlas Premium Pass, so Split is open in demo mode. */
+export const demoEntitlements: EntitlementRow[] = [
+  { id: "e1", user_id: DEMO_USER_ID, kind: "yearly", trip_id: null, starts_at: "2026-09-01T00:00:00Z", ends_at: "2027-09-01T00:00:00Z", gifted_by: null, source: "seed", created_at: "2026-09-01T00:00:00Z" },
+];
+
+/** A settled bill from the Lisbon trip, for the hub's "Past splits". */
+export const demoPastBills = [
+  { id: "99999999-9999-4999-8999-999999999992", trip_id: "22222222-2222-4222-8222-222222222222", place_id: null, merchant: "Time Out Market", currency: "EUR", status: "settled" as const, bill_date: "2026-06-05", tax_amount: 0, tax_label: null, service_amount: 15.1, discount_amount: 0, rounding_unit: 0.01, tax_mode: "proportional" as const, paid_by: null, receipt_pages: 1, created_by: DEMO_USER_ID, created_at: "2026-06-05T20:10:00Z", updated_at: "2026-06-05T21:00:00Z", closed_at: "2026-06-05T21:00:00Z", trip_name: "Lisbon 2026", people: 3 },
+];
 
 /** Fixed "now" used by demo mode so countdowns match the mockups (12 days away). */
 export const DEMO_NOW = new Date("2027-03-03T05:41:00Z");

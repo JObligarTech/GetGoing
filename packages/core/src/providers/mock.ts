@@ -38,16 +38,23 @@ const PHRASES: Record<string, { text: string; romanized: string }> = {
   "Does this contain peanuts?": { text: "これにピーナッツは入っていますか？", romanized: "Kore ni pīnattsu wa haitte imasu ka?" },
   "Yuzu Shio Ramen": { text: "柚子塩らーめん", romanized: "Yuzu shio rāmen" },
   "Tsukemen (dipping noodles)": { text: "つけ麺", romanized: "Tsukemen" },
+  "Gyoza": { text: "餃子", romanized: "Gyōza" },
   "Gyoza, 5 pcs": { text: "餃子 5個", romanized: "Gyōza go-ko" },
   "Extra chashu": { text: "チャーシュー追加", romanized: "Chāshū tsuika" },
   "Draft beer": { text: "生ビール", romanized: "Nama bīru" },
   "Cola": { text: "コーラ", romanized: "Kōra" },
+  "Coke": { text: "コーラ", romanized: "Kōra" },
+  "Tsukemen": { text: "つけ麺", romanized: "Tsukemen" },
+  "Subtotal": { text: "小計", romanized: "Shōkei" },
+  "Tax 10%": { text: "消費税10%", romanized: "Shōhizei jup-pāsento" },
   "Total": { text: "合計", romanized: "Gōkei" },
   "Contains wheat, soy and egg": { text: "小麦・大豆・卵を含む", romanized: "Komugi, daizu, tamago o fukumu" },
 };
 const norm = (s: string) => s.trim().toLowerCase().replace(/[。？?！!.]+$/u, "");
 const EN_JA = new Map(Object.entries(PHRASES).map(([en, ja]) => [norm(en), { en, ...ja }]));
-const JA_EN = new Map(Object.entries(PHRASES).map(([en, ja]) => [norm(ja.text), en]));
+// First entry wins for the reverse direction ("コーラ" → "Cola", not "Coke").
+const JA_EN = new Map<string, string>();
+for (const [en, ja] of Object.entries(PHRASES)) if (!JA_EN.has(norm(ja.text))) JA_EN.set(norm(ja.text), en);
 export const mockTranslation: TranslationProvider = {
   async translate(text, from, to) {
     const key = norm(text);
@@ -74,9 +81,24 @@ export const mockFx: FxProvider = {
   },
 };
 
+/** The same shop's receipt: quantities, a misread line (つけ麹 for つけ麺) and the tax/total block. */
+const RECEIPT_LINES = [
+  { text: "AFURI 原宿", confidence: 0.98 },
+  { text: "2027/03/15 19:48", confidence: 0.9 },
+  { text: "柚子塩らーめん ×2 ¥2,400", confidence: 0.96 },
+  { text: "餃子 ×1 ¥600", confidence: 0.95 },
+  { text: "生ビール ×2 ¥1,400", confidence: 0.93 },
+  { text: "コーラ ×1 ¥300", confidence: 0.97 },
+  { text: "つけ麹 ×1 ¥1,350", confidence: 0.55 },
+  { text: "小計 ¥6,050", confidence: 0.99 },
+  { text: "消費税10% ¥605", confidence: 0.97 },
+  { text: "合計 ¥6,655", confidence: 0.99 },
+];
+
 /** A ramen-shop menu; boxes are [x, y, w, h] as fractions of the image so the overlay can be drawn on any photo. */
 export const mockOcr: OcrProvider = {
-  async recognize() {
+  async recognize(_image, opts) {
+    if (opts?.document === "receipt") return RECEIPT_LINES;
     return [
       { text: "AFURI 原宿", confidence: 0.98, box: [0.08, 0.06, 0.5, 0.07] },
       { text: "柚子塩らーめん ¥1,200", confidence: 0.95, box: [0.08, 0.22, 0.84, 0.08] },

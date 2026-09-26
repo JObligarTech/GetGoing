@@ -6,6 +6,8 @@ export * from "./navigate";
 export * from "./tree";
 export * from "./translate";
 export * from "./money";
+export * from "./split";
+export * from "./people";
 export * from "./db";
 export * from "./providers";
 export * from "./demo";

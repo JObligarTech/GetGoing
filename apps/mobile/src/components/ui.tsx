@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { AccessibilityInfo, Platform, Pressable, StyleSheet, Text, View, type AccessibilityState, type PressableProps, type StyleProp, type TextStyle, type ViewStyle } from "react-native";
+import { AccessibilityInfo, Platform, Pressable, StyleSheet, Text, View, type AccessibilityState, type PressableProps, type StyleProp, type TextStyle, type ViewProps, type ViewStyle } from "react-native";
 import Animated, { useAnimatedStyle, useReducedMotion, useSharedValue, withTiming } from "react-native-reanimated";
 import { Ionicons } from "@expo/vector-icons";
 import { initial } from "@voya/core";
@@ -55,9 +55,9 @@ export function Button({ variant = "primary", size = "md", label, icon, full, st
   );
 }
 
-export function Card({ children, style }: { children: ReactNode; style?: StyleProp<ViewStyle> }) {
+export function Card({ children, style, ...rest }: { children: ReactNode; style?: StyleProp<ViewStyle> } & Omit<ViewProps, "style" | "children">) {
   const t = useTheme();
-  return <View style={[{ backgroundColor: t.surface, borderColor: t.border, borderWidth: 1, borderRadius: 14, overflow: "hidden" }, style]}>{children}</View>;
+  return <View style={[{ backgroundColor: t.surface, borderColor: t.border, borderWidth: 1, borderRadius: 14, overflow: "hidden" }, style]} {...rest}>{children}</View>;
 }
 
 export function Eyebrow({ children, style }: { children: ReactNode; style?: StyleProp<TextStyle> }) {

@@ -1,7 +1,8 @@
 import "server-only";
 import { cookies } from "next/headers";
 import {
-  demoBundle, demoTrips, type ItineraryItem, type Phrase, type PhraseInput, type RouteInput, type TreeInput, type TripBundle, type TripCurrencyInput, type TripCurrencyRow, type TripInput, type TripListItem,
+  demoBundle, demoPastBills, demoTrips, nextTravelerColor, type BillInput, type BillListItem, type ClaimView, type ItineraryItem, type Phrase, type PhraseInput, type RouteInput, type TravelerInput, type TravelerRow,
+  type TreeInput, type TripBundle, type TripCurrencyInput, type TripCurrencyRow, type TripInput, type TripInviteRow, type TripListItem,
 } from "@voya/core";
 
 /**
@@ -18,6 +19,12 @@ const sessions = new Map<string, DemoState>();
 
 function fresh(): DemoState {
   return { trips: structuredClone(demoTrips), bundles: new Map([[demoBundle.trip.id, structuredClone(demoBundle)]]) };
+}
+
+/** Every sandbox's bundles: token lookups (claim links, invites) work across browsers, like the real database. */
+async function allBundles(): Promise<TripBundle[]> {
+  await state();
+  return [...sessions.values()].flatMap((s) => [...s.bundles.values()]);
 }
 
 async function state(): Promise<DemoState> {
@@ -47,8 +54,8 @@ export const demoStore = {
     };
     s.trips.push(trip);
     s.bundles.set(id, {
-      trip, travelers: [{ id: crypto.randomUUID(), trip_id: id, user_id: ownerId, name: "Joe Obligar", color: "#2F5D3A", created_at: ts }],
-      categories: [], places: [], placeCategories: [], stays: [], itinerary: [], routes: [], routeStops: [], routeBranches: [], routeBranchTravelers: [], phrases: [], tripCurrencies: [],
+      trip, travelers: [{ id: crypto.randomUUID(), trip_id: id, user_id: ownerId, name: "Joe Obligar", color: "#2F5D3A", created_at: ts, email: null, phone: null, home_currency: null, joining_start: null, joining_end: null, joining_note: null, updated_at: ts }],
+      categories: [], places: [], placeCategories: [], stays: [], itinerary: [], routes: [], routeStops: [], routeBranches: [], routeBranchTravelers: [], phrases: [], tripCurrencies: [], tripInvites: [], bills: [], billItems: [], billParticipants: [], billShares: [],
     });
     return trip;
   },
@@ -114,6 +121,137 @@ export const demoStore = {
     const before = b.tripCurrencies.length;
     b.tripCurrencies = b.tripCurrencies.filter((c) => c.code !== code);
     return b.tripCurrencies.length < before;
+  },
+
+  // ─── People ───────────────────────────────────────────────────────────────
+  async addTraveler(input: TravelerInput): Promise<TravelerRow | null> {
+    const b = (await state()).bundles.get(input.tripId);
+    if (!b || b.travelers.length >= 50) return null;
+    const ts = new Date().toISOString();
+    const row: TravelerRow = { id: crypto.randomUUID(), trip_id: input.tripId, user_id: null, name: input.name, color: input.color ?? nextTravelerColor(b.travelers), created_at: ts, email: input.email, phone: input.phone, home_currency: input.homeCurrency, joining_start: input.joiningStart, joining_end: input.joiningEnd, joining_note: input.joiningNote, updated_at: ts };
+    b.travelers.push(row);
+    const trip = (await state()).trips.find((t) => t.id === input.tripId);
+    if (trip) trip.traveler_count = b.travelers.length;
+    return row;
+  },
+  async updateTraveler(id: string, input: TravelerInput): Promise<TravelerRow | null> {
+    const b = (await state()).bundles.get(input.tripId);
+    const t = b?.travelers.find((x) => x.id === id);
+    if (!b || !t) return null;
+    Object.assign(t, { name: input.name, email: input.email, phone: input.phone, home_currency: input.homeCurrency, joining_start: input.joiningStart, joining_end: input.joiningEnd, joining_note: input.joiningNote, color: input.color ?? t.color, updated_at: new Date().toISOString() });
+    return t;
+  },
+  async removeTraveler(tripId: string, id: string): Promise<boolean> {
+    const s = await state();
+    const b = s.bundles.get(tripId);
+    if (!b) return false;
+    const t = b.travelers.find((x) => x.id === id);
+    if (!t || t.user_id) return false; // account holders leave via membership, not this button
+    b.travelers = b.travelers.filter((x) => x.id !== id);
+    b.routeBranchTravelers = b.routeBranchTravelers.filter((x) => x.traveler_id !== id);
+    const trip = s.trips.find((x) => x.id === tripId);
+    if (trip) trip.traveler_count = b.travelers.length;
+    return true;
+  },
+  async createInvite(tripId: string, travelerId: string | null, userId: string): Promise<TripInviteRow | null> {
+    const b = (await state()).bundles.get(tripId);
+    if (!b) return null;
+    const existing = b.tripInvites.find((i) => i.traveler_id === travelerId && !i.accepted_at && new Date(i.expires_at) > new Date());
+    if (existing) return existing;
+    const token = [...crypto.getRandomValues(new Uint8Array(18))].map((x) => x.toString(16).padStart(2, "0")).join("");
+    const row: TripInviteRow = { token, trip_id: tripId, traveler_id: travelerId, role: "editor", created_by: userId, expires_at: new Date(Date.now() + 30 * 86_400_000).toISOString(), accepted_by: null, accepted_at: null, created_at: new Date().toISOString() };
+    b.tripInvites.push(row);
+    return row;
+  },
+  async invitePreview(token: string) {
+    for (const b of await allBundles()) {
+      const i = b.tripInvites.find((x) => x.token === token && new Date(x.expires_at) > new Date());
+      if (i) return { trip_name: b.trip.name, inviter: "Joe", traveler: b.travelers.find((t) => t.id === i.traveler_id)?.name ?? null, expires_at: i.expires_at, accepted: !!i.accepted_at };
+    }
+    return null;
+  },
+
+  // ─── Split ────────────────────────────────────────────────────────────────
+  /** Create or replace a bill (mirrors the save_bill RPC). Existing participants keep their claim tokens. */
+  async saveBill(input: BillInput, userId: string): Promise<string | null> {
+    const b = (await state()).bundles.get(input.tripId);
+    if (!b) return null;
+    const ts = new Date().toISOString();
+    const id = input.billId ?? crypto.randomUUID();
+    const old = input.billId ? b.bills.find((x) => x.id === id) : null;
+    if (input.billId && !old) return null;
+    const oldPeople = new Map(b.billParticipants.filter((p) => p.bill_id === id).map((p) => [p.id, p]));
+    b.billItems = b.billItems.filter((i) => i.bill_id !== id);
+    b.billParticipants = b.billParticipants.filter((p) => p.bill_id !== id);
+    b.billShares = b.billShares.filter((s) => s.bill_id !== id);
+    const bill = {
+      id, trip_id: input.tripId, place_id: input.placeId, merchant: input.merchant, currency: input.currency, status: input.status, bill_date: input.billDate,
+      tax_amount: input.taxAmount, tax_label: input.taxLabel, service_amount: input.serviceAmount, discount_amount: input.discountAmount, rounding_unit: input.roundingUnit, tax_mode: input.taxMode,
+      paid_by: input.paidBy, receipt_pages: old?.receipt_pages ?? 0, created_by: old?.created_by ?? userId, created_at: old?.created_at ?? ts, updated_at: ts,
+      closed_at: input.status === "settled" ? old?.closed_at ?? ts : null,
+    };
+    b.bills = [bill, ...b.bills.filter((x) => x.id !== id)];
+    input.participants.forEach((p) => {
+      const prev = oldPeople.get(p.id);
+      b.billParticipants.push({ id: p.id, bill_id: id, trip_id: input.tripId, traveler_id: p.travelerId, name: p.name, color: p.color, home_currency: p.homeCurrency, claim_token: prev?.claim_token ?? [...crypto.getRandomValues(new Uint8Array(16))].map((x) => x.toString(16).padStart(2, "0")).join(""), claim_status: prev?.claim_status ?? "none", claim_expires_at: prev?.claim_expires_at ?? new Date(Date.now() + 30 * 86_400_000).toISOString(), created_at: prev?.created_at ?? ts });
+    });
+    input.items.forEach((i, n) => b.billItems.push({ id: i.id, bill_id: id, trip_id: input.tripId, name: i.name, local_name: i.localName, qty: i.qty, unit_price: i.unitPrice, confidence: i.confidence, sort_order: n, created_at: ts }));
+    for (const s of input.shares) b.billShares.push({ item_id: s.itemId, participant_id: s.participantId, bill_id: id, trip_id: input.tripId });
+    return id;
+  },
+  async deleteBill(tripId: string, billId: string): Promise<boolean> {
+    const b = (await state()).bundles.get(tripId);
+    if (!b || !b.bills.some((x) => x.id === billId)) return false;
+    b.bills = b.bills.filter((x) => x.id !== billId);
+    b.billItems = b.billItems.filter((x) => x.bill_id !== billId);
+    b.billParticipants = b.billParticipants.filter((x) => x.bill_id !== billId);
+    b.billShares = b.billShares.filter((x) => x.bill_id !== billId);
+    return true;
+  },
+  async markClaimSent(tripId: string, billId: string, participantId: string): Promise<string | null> {
+    const b = (await state()).bundles.get(tripId);
+    const p = b?.billParticipants.find((x) => x.id === participantId && x.bill_id === billId);
+    if (!p?.claim_token) return null;
+    if (p.claim_status === "none") p.claim_status = "sent";
+    return p.claim_token;
+  },
+  async listBills(): Promise<BillListItem[]> {
+    const s = await state();
+    const mine = [...s.bundles.values()].flatMap((b) => b.bills.map((bill) => ({ ...bill, trip_name: b.trip.name, people: b.billParticipants.filter((p) => p.bill_id === bill.id).length })));
+    return [...mine, ...demoPastBills].sort((a, b) => b.created_at.localeCompare(a.created_at));
+  },
+  /** Token-scoped view for the public claim page (mirrors bill_claim_view; marks the link opened). */
+  async claimView(token: string): Promise<ClaimView | null> {
+    for (const b of await allBundles()) {
+      const me = b.billParticipants.find((p) => p.claim_token === token && p.claim_status !== "none" && new Date(p.claim_expires_at) > new Date());
+      if (!me) continue;
+      const bill = b.bills.find((x) => x.id === me.bill_id)!;
+      if (me.claim_status === "sent") me.claim_status = "opened";
+      const first = (n: string) => n.split(" ")[0]!;
+      return {
+        merchant: bill.merchant, currency: bill.currency, status: bill.status === "settled" ? "settled" : "open",
+        sender: first(b.billParticipants.find((p) => p.id === bill.paid_by)?.name ?? "Joe"), you: { id: me.id, name: first(me.name) },
+        tax_amount: bill.tax_amount, service_amount: bill.service_amount, discount_amount: bill.discount_amount, tax_mode: bill.tax_mode, rounding_unit: bill.rounding_unit,
+        participants: b.billParticipants.filter((p) => p.bill_id === bill.id).map((p) => ({ id: p.id, name: first(p.name) })),
+        items: b.billItems.filter((i) => i.bill_id === bill.id).sort((x, y) => x.sort_order - y.sort_order).map((i) => ({ id: i.id, name: i.name, local_name: i.local_name, qty: i.qty, unit_price: i.unit_price })),
+        shares: b.billShares.filter((x) => x.bill_id === bill.id).map((x) => ({ item_id: x.item_id, participant_id: x.participant_id })),
+      };
+    }
+    return null;
+  },
+  async claimSubmit(token: string, itemIds: string[]): Promise<ClaimView | { error: string }> {
+    for (const b of await allBundles()) {
+      const me = b.billParticipants.find((p) => p.claim_token === token && p.claim_status !== "none" && new Date(p.claim_expires_at) > new Date());
+      if (!me) continue;
+      const bill = b.bills.find((x) => x.id === me.bill_id)!;
+      if (bill.status !== "open") return { error: "This bill is closed." };
+      const valid = new Set(b.billItems.filter((i) => i.bill_id === bill.id).map((i) => i.id));
+      b.billShares = b.billShares.filter((x) => x.participant_id !== me.id);
+      for (const id of itemIds) if (valid.has(id)) b.billShares.push({ item_id: id, participant_id: me.id, bill_id: bill.id, trip_id: bill.trip_id });
+      me.claim_status = "claimed";
+      return (await this.claimView(token))!;
+    }
+    return { error: "Link not found or expired." };
   },
 
   async assignPlaceToSlot(tripId: string, itemId: string, placeId: string): Promise<ItineraryItem | null> {

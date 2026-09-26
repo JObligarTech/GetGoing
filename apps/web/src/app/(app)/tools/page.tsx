@@ -19,7 +19,7 @@ export default async function ToolsPage() {
       <Card className="divide-y divide-line">
         <ListRow href="/translate" leading={<IconCoin><Languages size={20} /></IconCoin>} title="Translate" subtitle={`${pair.to.native} ready · text, voice, camera`} chevron />
         <ListRow href="/currency" leading={<IconCoin><Landmark size={20} /></IconCoin>} title="Currency" subtitle={active?.local_currency ? `${user.profile.home_currency} ⇄ ${active.local_currency}` : "Set a trip currency"} trailing={<Chip tone="premium">Premium</Chip>} chevron />
-        <ListRow href="/split" leading={<IconCoin><Receipt size={20} /></IconCoin>} title="Split" subtitle="Scan a receipt, assign items" trailing={<Chip tone="premium">Premium</Chip>} chevron />
+        <ListRow href="/split" leading={<IconCoin><Receipt size={20} /></IconCoin>} title="Split" subtitle="Scan a receipt · friends claim by link" trailing={<Chip tone="premium">Premium</Chip>} chevron />
       </Card>
     </Page>
   );

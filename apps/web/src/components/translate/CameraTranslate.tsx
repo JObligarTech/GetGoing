@@ -18,6 +18,9 @@ export interface CameraTranslateProps {
   homeCurrency: string;
   rate: CachedRate | null;
   recognizeAction: (formData: FormData) => Promise<{ lines: CameraLine[]; from: string; to: string } | { error: string }>;
+  /** Camera → Split: starts a draft bill from the priced lines (Atlas Premium Pass). */
+  splitAction?: (lines: unknown, placeId: unknown) => Promise<{ error: string } | undefined | void>;
+  canSplit?: boolean;
 }
 
 type View = "overlay" | "text";
@@ -27,7 +30,7 @@ type View = "overlay" | "text";
  * it with the OCR provider and translates each line; nothing is stored. Overlay draws the
  * translations over the photo; Text lists them with prices in both currencies.
  */
-export function CameraTranslate({ tripName, from, to, localCurrency, homeCurrency, rate, recognizeAction }: CameraTranslateProps) {
+export function CameraTranslate({ tripName, from, to, localCurrency, homeCurrency, rate, recognizeAction, splitAction, canSplit }: CameraTranslateProps) {
   const reduce = useReducedMotion();
   const [image, setImage] = useState<{ url: string; alt: string } | null>(null);
   const [lines, setLines] = useState<CameraLine[] | null>(null);
@@ -142,7 +145,7 @@ export function CameraTranslate({ tripName, from, to, localCurrency, homeCurrenc
         <Button variant="secondary" icon={<ImageIcon size={18} />} onClick={() => chooseRef.current?.click()}>Choose photo</Button>
         <Button variant="ink" icon={<Camera size={18} />} onClick={() => takeRef.current?.click()}>Take photo</Button>
         <Button variant="secondary" icon={<Sparkles size={18} />} onClick={sample} loading={pending}>Try a sample menu</Button>
-        <Button variant="secondary" icon={<Receipt size={18} />} disabled title="Split arrives in the next round">Send to Split</Button>
+        <Button variant="secondary" icon={<Receipt size={18} />} disabled={!lines || !lines.some((l) => l.price != null) || !splitAction || pending} title={canSplit ? undefined : "Split is part of Atlas Premium Pass"} onClick={() => lines && splitAction && start(async () => { const r = await splitAction(lines.filter((l) => l.price != null).map((l) => ({ name: l.translated || l.original, localName: l.original, price: l.price! })), null); if (r && "error" in r) setError(r.error); })}>Send to Split</Button>
       </div>
       {rate?.stale && <p className="text-[12px] text-muted">Prices use a cached rate ({rate.base} → {rate.quote}); you seem to be offline.</p>}
       {!localCurrency && <p className="text-[12px] text-muted">Set the trip&apos;s currency to see prices in {homeCurrency}.</p>}

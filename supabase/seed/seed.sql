@@ -102,3 +102,55 @@ insert into public.phrases (id, trip_id, source_text, source_lang, target_text, 
   ('88888888-8888-4888-8888-888888888883', '22222222-2222-4222-8222-222222222221', 'Table for four', 'en', '4人です', 'ja', 'Yonin desu', 2, '11111111-1111-4111-8111-111111111111');
 insert into public.trip_currencies (trip_id, code, label, sort_order) values
   ('22222222-2222-4222-8222-222222222221', 'KRW', 'KRW · Seoul layover', 0);
+
+-- Guest details on Japan 2027 (People round)
+update public.travelers set email = 'chris@example.com' where trip_id = '22222222-2222-4222-8222-222222222221' and name = 'Chris';
+update public.travelers set home_currency = 'CAD', joining_start = '2027-03-15', joining_end = '2027-03-20', joining_note = 'Tokyo only' where trip_id = '22222222-2222-4222-8222-222222222221' and name = 'Daniel';
+update public.travelers set phone = '+1 415 555 0142' where trip_id = '22222222-2222-4222-8222-222222222221' and name = 'Sarah';
+
+-- The demo account holds a yearly Atlas Premium Pass so Split is open.
+insert into public.entitlements (user_id, kind, starts_at, ends_at, source) values
+  ('11111111-1111-4111-8111-111111111111', 'yearly', '2026-09-01', '2027-09-01', 'seed');
+
+-- Tonight's dinner, mid-split (mockup 5b): Joe paid, Chris claimed by link, Daniel opened his, Coke unassigned.
+insert into public.bills (id, trip_id, place_id, merchant, currency, status, bill_date, tax_amount, tax_label, receipt_pages, created_by) values
+  ('99999999-9999-4999-8999-999999999991', '22222222-2222-4222-8222-222222222221', '44444444-4444-4444-8444-444444444445', 'Afuri Ramen Harajuku', 'JPY', 'open', '2027-03-15', 605, 'Tax 10%', 2, '11111111-1111-4111-8111-111111111111');
+insert into public.bill_participants (id, bill_id, trip_id, traveler_id, name, color, home_currency, claim_token, claim_status)
+  select 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1', '99999999-9999-4999-8999-999999999991', trip_id, id, 'Joe', '#2F5D3A', 'USD', null, 'none' from public.travelers where trip_id = '22222222-2222-4222-8222-222222222221' and name = 'Joe Obligar';
+insert into public.bill_participants (id, bill_id, trip_id, traveler_id, name, color, home_currency, claim_token, claim_status)
+  select 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa2', '99999999-9999-4999-8999-999999999991', trip_id, id, 'Chris', '#E0703A', 'USD', 'k8fq2demo0000000000000000chris01', 'claimed' from public.travelers where trip_id = '22222222-2222-4222-8222-222222222221' and name = 'Chris';
+insert into public.bill_participants (id, bill_id, trip_id, traveler_id, name, color, home_currency, claim_token, claim_status)
+  select 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa3', '99999999-9999-4999-8999-999999999991', trip_id, id, 'Daniel', '#5568C9', 'CAD', 'k8fq2demo000000000000000daniel01', 'opened' from public.travelers where trip_id = '22222222-2222-4222-8222-222222222221' and name = 'Daniel';
+insert into public.bill_participants (id, bill_id, trip_id, traveler_id, name, color, home_currency, claim_token, claim_status)
+  select 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa4', '99999999-9999-4999-8999-999999999991', trip_id, id, 'Sarah', '#C9516F', 'USD', null, 'none' from public.travelers where trip_id = '22222222-2222-4222-8222-222222222221' and name = 'Sarah';
+update public.bills set paid_by = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1' where id = '99999999-9999-4999-8999-999999999991';
+insert into public.bill_items (id, bill_id, trip_id, name, local_name, qty, unit_price, confidence, sort_order) values
+  ('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb1', '99999999-9999-4999-8999-999999999991', '22222222-2222-4222-8222-222222222221', 'Yuzu Shio Ramen', '柚子塩らーめん', 2, 1200, 0.96, 0),
+  ('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb2', '99999999-9999-4999-8999-999999999991', '22222222-2222-4222-8222-222222222221', 'Gyoza', '餃子', 1, 600, 0.95, 1),
+  ('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb3', '99999999-9999-4999-8999-999999999991', '22222222-2222-4222-8222-222222222221', 'Draft beer', '生ビール', 2, 700, 0.93, 2),
+  ('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb4', '99999999-9999-4999-8999-999999999991', '22222222-2222-4222-8222-222222222221', 'Coke', 'コーラ', 1, 300, 0.97, 3),
+  ('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb5', '99999999-9999-4999-8999-999999999991', '22222222-2222-4222-8222-222222222221', 'Tsukemen', 'つけ麺', 1, 1350, 0.55, 4);
+insert into public.bill_shares (item_id, participant_id, bill_id, trip_id) values
+  ('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb1', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1', '99999999-9999-4999-8999-999999999991', '22222222-2222-4222-8222-222222222221'),
+  ('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb1', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa4', '99999999-9999-4999-8999-999999999991', '22222222-2222-4222-8222-222222222221'),
+  ('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb2', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1', '99999999-9999-4999-8999-999999999991', '22222222-2222-4222-8222-222222222221'),
+  ('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb2', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa2', '99999999-9999-4999-8999-999999999991', '22222222-2222-4222-8222-222222222221'),
+  ('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb3', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1', '99999999-9999-4999-8999-999999999991', '22222222-2222-4222-8222-222222222221'),
+  ('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb3', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa3', '99999999-9999-4999-8999-999999999991', '22222222-2222-4222-8222-222222222221'),
+  ('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb5', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa2', '99999999-9999-4999-8999-999999999991', '22222222-2222-4222-8222-222222222221');
+
+-- A settled bill on Lisbon 2026 for "Past splits".
+insert into public.bills (id, trip_id, merchant, currency, status, bill_date, service_amount, rounding_unit, receipt_pages, created_by, closed_at) values
+  ('99999999-9999-4999-8999-999999999992', '22222222-2222-4222-8222-222222222222', 'Time Out Market', 'EUR', 'settled', '2026-06-05', 15.10, 0.01, 1, '11111111-1111-4111-8111-111111111111', '2026-06-05 21:00+01');
+insert into public.bill_participants (id, bill_id, trip_id, traveler_id, name, color, home_currency)
+  select 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaab1', '99999999-9999-4999-8999-999999999992', trip_id, id, 'Joe', '#2F5D3A', 'USD' from public.travelers where trip_id = '22222222-2222-4222-8222-222222222222' and name = 'Joe Obligar';
+insert into public.bill_participants (id, bill_id, trip_id, traveler_id, name, color, home_currency)
+  select 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaab2', '99999999-9999-4999-8999-999999999992', trip_id, id, 'Sarah', '#C9516F', 'USD' from public.travelers where trip_id = '22222222-2222-4222-8222-222222222222' and name = 'Sarah';
+insert into public.bill_participants (id, bill_id, trip_id, name, color, home_currency) values
+  ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaab3', '99999999-9999-4999-8999-999999999992', '22222222-2222-4222-8222-222222222222', 'Nuno', '#2B8C8C', 'EUR');
+insert into public.bill_items (bill_id, trip_id, name, qty, unit_price, sort_order) values
+  ('99999999-9999-4999-8999-999999999992', '22222222-2222-4222-8222-222222222222', 'Bifana', 3, 6.50, 0),
+  ('99999999-9999-4999-8999-999999999992', '22222222-2222-4222-8222-222222222222', 'Vinho verde', 2, 7.00, 1),
+  ('99999999-9999-4999-8999-999999999992', '22222222-2222-4222-8222-222222222222', 'Pastel de nata', 6, 2.30, 2),
+  ('99999999-9999-4999-8999-999999999992', '22222222-2222-4222-8222-222222222222', 'Grilled octopus', 1, 24.00, 3);
+update public.bills set paid_by = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaab1' where id = '99999999-9999-4999-8999-999999999992';

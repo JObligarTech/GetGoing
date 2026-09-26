@@ -12,7 +12,7 @@ This repo implements the [Claude Design](https://claude.ai/design) handoff (gree
 | `packages/tokens` | Design tokens (light + dark) with WCAG-AA contrast tests; generates the CSS variables and the native theme |
 | `supabase` | Postgres schema, row-level security, account deletion / data export RPCs, seed, RLS tests |
 
-## Status — build round 4 (Translate + Currency)
+## Status — build round 5 (People + Split)
 
 **Round 1 (foundation + core flows), done and verified:** design tokens · Supabase schema + RLS · auth (welcome, log in, create account with 16+ gate and unticked marketing consent, welcome back, reset) · Home (live map, countdown, local/home clocks, stay card, today's places, trip switcher) · Trips (list, overview, create) · Plan (day timeline, open-slot suggestions, map view) · saved place / stay details ("Take me back to my hotel", address in 日本語) · profile (theme, legal, data export, account deletion).
 
@@ -40,7 +40,15 @@ This repo implements the [Claude Design](https://claude.ai/design) handoff (gree
 - **Show to driver** (mockup 4b) — from a place page or Translate: "ここまでお願いします" with the local-script name, address and phone on a dark card, English underneath, Speak, Enlarge, Show map (drive directions).
 - **Currency** (mockup 4b/4c) — home → trip currency with the mid-market rate and "Updated 2 min ago", swap, quick amounts ($1…$100, scaled for yen-like currencies), trip currency chips ("JPY", "KRW · Seoul layover", add/remove via `trip_currencies`), a keypad with Tip and % off presets, Save (kept on the device), "Common in Japan" reference prices, and a rate cache with a stale fallback so the converter keeps working offline (`createFxCache`; server-side on web, persisted per pair on mobile). Frankfurter (keyless) is one env var away from live rates.
 
-Scheduled for the next rounds (routes exist as honest placeholders): Split, People, Atlas Premium Pass checkout, offline states.
+**Round 5 (People + Split), done and verified on web and mobile:**
+
+- **People** (mockup 2c) — everyone on the trip with how they show up ("You · Organizer · All 14 nights · Home USD", "Guest · Tokyo only, Mar 15–20 · Home CAD"), the groups tree routes created, and add / edit for guests: a name is enough; contact, home currency and joining dates are optional. **Invite** builds a 30-day link (`trip_invites`); the public `/join/[token]` page shows only the trip name, who asked and the guest's name, and `accept_trip_invite` adds the membership and turns the guest row into the account's row. Guests never need an account for Split.
+- **Split** (mockups 5a/5b/5c/8b), part of Atlas Premium Pass — the locked state with the three tiers and the gift path; **scan** with the merchant (tonight's dinner), currency and people prefilled from the trip, several pages, "Enter by hand"; **check items** with OCR correction (quantities, prices, a flagged low-confidence line, "read as つけ麹"), Translate, tax / service / discount, and the manual "Add item by hand" sheet (name, price, quantity, who had it); **who had what** with an avatar on every item, shared items, "Split rest evenly", tax shared in proportion or evenly, a guest added to one bill, and a **claim link** per person; **everyone's share** with fractions (½ Gyoza), tax, rounding to the yen, each person's own home currency (Daniel sees CA$), the payer's "Collects ¥3,924 from 3 people", Share summary, Close / Reopen. Desktop shows the receipt lines on the left and the steps on the right.
+- **Claim link** — `/s/[token]` is a public page with no account: "Joe sent you a bill from Afuri. Chris, pick what you ordered." It runs through two token-scoped database functions that expose first names and items only, mark the link opened, and accept picks only while the bill is open. Tokens are issued by the database, unusable until the sender shares them, and expire after 30 days.
+- **Cross-feature** — Restaurant → "Split a bill here"; Camera → "Send to Split" turns priced menu lines into a draft bill; Split → each person's home currency uses the Currency rates.
+- **Atlas Premium Pass** — `entitlements` (single trip, monthly, yearly, gift) gate Split on web and mobile; the demo account holds a yearly pass. Checkout, gifting and redeem are the next round.
+
+Scheduled for the next round (routes exist as honest placeholders): Atlas Premium Pass checkout and gifting, offline states.
 
 ## Run it
 
@@ -65,9 +73,9 @@ The service-role key is never used by either app; the web app refuses to start i
 ## Verify
 
 ```bash
-pnpm test                          # tokens contrast (15) + core (80) + web components (9, axe) + mobile (27, RNTL)
-pnpm --filter @voya/core test:db   # migrations + seed + RLS scenarios (13) on a throwaway Postgres 16
-pnpm test:e2e                      # Playwright: 222 tests across iPhone/Android/iPad/desktop × light/dark
+pnpm test                          # tokens contrast (15) + core (91) + web components (9, axe) + mobile (32, RNTL)
+pnpm --filter @voya/core test:db   # migrations + seed + RLS scenarios (16) on a throwaway Postgres 16
+pnpm test:e2e                      # Playwright: 270 tests across iPhone/Android/iPad/desktop × light/dark
 pnpm typecheck && pnpm lint
 ```
 
@@ -86,12 +94,12 @@ The e2e suite runs against a production build in demo mode. Every screen is chec
 ## Layout
 
 ```
-apps/web/src/app        routes: (marketing)/ landing · (auth)/* · (app)/{home,trips,plan,navigate/{route,day,tree},translate/{conversation,camera,driver},currency,profile,…} · auth/actions.ts · legal/[doc]
+apps/web/src/app        routes: (marketing)/ landing · (auth)/* · (app)/{home,trips/[id]/people,plan,navigate/{route,day,tree},translate/{conversation,camera,driver},currency,split/{new,[id]},profile,…} · s/[token] claim link · join/[token] invite · legal/[doc]
 apps/web/src/components ui primitives, shell (tab bar / rail / sidebar), map, per-feature components
 apps/web/src/proxy.ts   CSP nonce, security headers, session refresh, route protection
-apps/mobile/app         expo-router: (auth)/* · (tabs)/* · plan · place/[id] · trips/[id] · navigate/{route,day,tree} · translate/{index,conversation,camera,driver} · currency
-packages/core/src       domain.ts · schemas.ts · selectors.ts · navigate.ts · tree.ts · translate.ts · money.ts · format.ts · providers/* · db/*
-supabase/migrations     0100 schema · 0200 RLS · 0300 account deletion & export · 0400 routes · 0500 route trees · 0600 phrases & trip currencies
+apps/mobile/app         expo-router: (auth)/* · (tabs)/* · plan · place/[id] · trips/[id] · people · navigate/{route,day,tree} · translate/{index,conversation,camera,driver} · currency · split/{index,new,[id]}
+packages/core/src       domain.ts · schemas.ts · selectors.ts · navigate.ts · tree.ts · translate.ts · money.ts · split.ts · people.ts · format.ts · providers/* · db/*
+supabase/migrations     0100 schema · 0200 RLS · 0300 account deletion & export · 0400 routes · 0500 route trees · 0600 phrases & trip currencies · 0700 people, invites, bills, claim links, entitlements
 ```
 
 See `SECURITY.md` for the threat model and controls.

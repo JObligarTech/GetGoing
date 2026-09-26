@@ -51,3 +51,6 @@ jest.mock("expo-image-picker", () => ({
   launchCameraAsync: jest.fn(async () => ({ canceled: false, assets: [{ uri: "file:///tmp/menu.jpg", width: 600, height: 800, mimeType: "image/jpeg", fileSize: 1024 }] })),
   launchImageLibraryAsync: jest.fn(async () => ({ canceled: true, assets: null })),
 }));
+
+// Demo saves re-render the whole provider tree; give async queries a little more room under a parallel run.
+require("@testing-library/react-native").configure({ asyncUtilTimeout: 4000 });
