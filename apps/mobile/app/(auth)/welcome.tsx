@@ -13,7 +13,7 @@ export default function Welcome() {
   return (
     <AuthHero>
       <View>
-        <Text accessibilityRole="header" style={{ fontSize: 48, fontFamily: t.font.extrabold, color: "#F1F3EF", letterSpacing: -1.5, lineHeight: 52 }}>Voya</Text>
+        <Text accessibilityRole="header" style={{ fontSize: 48, fontFamily: t.font.extrabold, color: "#F1F3EF", letterSpacing: -1.5, lineHeight: 52 }}>Get Going</Text>
         <Text style={{ fontSize: 18, color: "#C9D3CC", marginTop: 8, fontFamily: t.font.regular }}>Your whole trip. One place.</Text>
       </View>
       <View style={{ gap: 8 }}>

@@ -116,7 +116,7 @@ test.describe("Navigation tree (round 3)", () => {
     await expect(dialog.getByRole("checkbox")).toHaveCount(3);
     await dialog.getByRole("checkbox", { name: "Daniel" }).uncheck();
     await dialog.getByRole("button", { name: "Share my location" }).click();
-    // Round 6: Voya explains first, once per device; then the browser's own prompt (granted above).
+    // Round 6: Get Going explains first, once per device; then the browser's own prompt (granted above).
     await page.getByRole("dialog", { name: "Use your location for directions?" }).getByRole("button", { name: "Continue" }).click();
     await expect(dialog.getByRole("status").filter({ hasText: "Location link copied" })).toContainText("Location link copied — paste it to Chris, Sarah.");
     const text = await page.evaluate(() => navigator.clipboard.readText());

@@ -9,13 +9,13 @@ test.describe("landing page", () => {
     await expect(page.getByRole("heading", { level: 1, name: "Your whole trip. One place." })).toBeVisible();
     await expect(page.getByText("Because the trip is the context for everything.")).toBeVisible();
     // Real product screenshots with descriptive alt text, light/dark aware.
-    await expect(page.getByRole("img", { name: /Voya Home screen for a trip called Japan 2027/ })).toBeVisible();
+    await expect(page.getByRole("img", { name: /Get Going Home screen for a trip called Japan 2027/ })).toBeVisible();
     // The animated scenes are decorative for AT and carry a text equivalent.
     await expect(page.getByText(/Each one flows into the tool that needs it/)).toBeAttached();
     await expect(page.getByText(/Directions from Hotel Gracery to Afuri Ramen compared across transit/)).toBeAttached();
     await expect(page.getByText(/Group A, Joe and Sarah, take the train to Shibuya Sky/)).toBeAttached();
     // Sections are labelled landmarks reachable from the site nav.
-    for (const name of ["Voya remembers the trip, so you don't have to.", "Directions that start from what Voya already knows.", "Tree routes: branch, compare, meet again.", "The rest of the trip is on its way.", "Start your first trip."]) {
+    for (const name of ["Get Going remembers the trip, so you don't have to.", "Directions that start from what Get Going already knows.", "Tree routes: branch, compare, meet again.", "The rest of the trip is on its way.", "Start your first trip."]) {
       await expect(page.getByRole("heading", { level: 2, name })).toBeAttached();
     }
     await expect(page.getByRole("navigation", { name: "Site" })).toBeVisible();
@@ -27,7 +27,7 @@ test.describe("landing page", () => {
     await page.emulateMedia({ reducedMotion: "reduce" });
     await page.goto("/");
     // Under reduced motion nothing is parked invisible and the marquee does not move.
-    const heading = page.getByRole("heading", { level: 2, name: /Voya remembers/ });
+    const heading = page.getByRole("heading", { level: 2, name: /Get Going remembers/ });
     await expect(heading).toBeVisible();
     await expect(heading).toHaveCSS("opacity", "1");
     await expect(page.locator("#context")).toHaveCSS("opacity", "1");
@@ -45,7 +45,7 @@ test.describe("landing page", () => {
     await page.keyboard.press("Tab");
     await expect(page.getByRole("link", { name: "Skip to content" })).toBeFocused();
     await page.keyboard.press("Tab");
-    await expect(page.getByRole("link", { name: "Voya home" })).toBeFocused();
+    await expect(page.getByRole("link", { name: "Get Going home" })).toBeFocused();
     await page.getByRole("navigation", { name: "Site" }).getByRole("link", { name: "Get started" }).click();
     await expect(page).toHaveURL(/\/signup$/);
     await page.goto("/");

@@ -19,7 +19,7 @@ function label(key: Key, state: State, declined: boolean): { text: string; tone:
   if (state === "limited") return { text: "Selected only", tone: "on" };
   if (state === "denied") return { text: `Off · ${key === "camera" ? "receipt scan and camera translation won't work" : "allow it in Settings"}`, tone: "off" };
   if (state === "unavailable") return { text: "Not available in this build", tone: "muted" };
-  return { text: declined ? "Declined in Voya · ask again from the feature" : "Not asked yet", tone: "muted" };
+  return { text: declined ? "Declined in Get Going · ask again from the feature" : "Not asked yet", tone: "muted" };
 }
 
 /** Permissions & legal (mockup 7a): each capability's state on this device, with the way back into OS Settings when it's off. */
@@ -49,7 +49,7 @@ export default function PermissionsScreen() {
           <Pressable accessibilityRole="button" accessibilityLabel="Back to Settings" onPress={() => router.back()} style={{ width: 44, height: 44, borderRadius: 22, borderWidth: 1, borderColor: t.borderStrong, backgroundColor: t.surface, alignItems: "center", justifyContent: "center" }}><Ionicons name="arrow-back" size={20} color={t.text} /></Pressable>
           <View style={{ flex: 1 }}><PageHeader eyebrow="Settings" title="Permissions" /></View>
         </View>
-        <Text style={{ fontSize: 13.5, color: t.textMuted, fontFamily: t.font.regular, lineHeight: 19 }}>Voya asks for each of these the first time a feature needs it. Turn them on or off here or in {Platform.OS === "ios" ? "iOS" : "Android"} Settings.</Text>
+        <Text style={{ fontSize: 13.5, color: t.textMuted, fontFamily: t.font.regular, lineHeight: 19 }}>Get Going asks for each of these the first time a feature needs it. Turn them on or off here or in {Platform.OS === "ios" ? "iOS" : "Android"} Settings.</Text>
         <Card>
           {PERMISSION_ROWS.map((r, i) => {
             const state = states[r.key] ?? "undetermined";
@@ -68,15 +68,15 @@ export default function PermissionsScreen() {
           })}
         </Card>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-          <Text style={{ flex: 1, fontSize: 12.5, color: t.textMuted, fontFamily: t.font.regular }}>Voya explains each permission once before {Platform.OS === "ios" ? "iOS" : "Android"} asks. Reset to see the explanations again.</Text>
+          <Text style={{ flex: 1, fontSize: 12.5, color: t.textMuted, fontFamily: t.font.regular }}>Get Going explains each permission once before {Platform.OS === "ios" ? "iOS" : "Android"} asks. Reset to see the explanations again.</Text>
           <Button variant="ghost" size="sm" label="Reset" disabled={Object.keys(asked).length === 0} onPress={() => { void permStore.set({}); announce("Explanations will show again."); }} />
         </View>
 
         <Eyebrow>Legal</Eyebrow>
         <Card>
-          <ListRow title="Terms of Service" chevron onPress={() => Linking.openURL(`${process.env.EXPO_PUBLIC_SITE_URL ?? "https://voya.app"}/legal/terms`)} />
-          <ListRow title="Privacy Policy" chevron onPress={() => Linking.openURL(`${process.env.EXPO_PUBLIC_SITE_URL ?? "https://voya.app"}/legal/privacy`)} />
-          <ListRow title="Download or delete my data" subtitle="Trips, places, receipts, translations" chevron last onPress={() => Linking.openURL(`${process.env.EXPO_PUBLIC_SITE_URL ?? "https://voya.app"}/settings/permissions`)} />
+          <ListRow title="Terms of Service" chevron onPress={() => Linking.openURL(`${process.env.EXPO_PUBLIC_SITE_URL ?? "https://getgoing.app"}/legal/terms`)} />
+          <ListRow title="Privacy Policy" chevron onPress={() => Linking.openURL(`${process.env.EXPO_PUBLIC_SITE_URL ?? "https://getgoing.app"}/legal/privacy`)} />
+          <ListRow title="Download or delete my data" subtitle="Trips, places, receipts, translations" chevron last onPress={() => Linking.openURL(`${process.env.EXPO_PUBLIC_SITE_URL ?? "https://getgoing.app"}/settings/permissions`)} />
         </Card>
       </ScrollView>
     </View>

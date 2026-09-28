@@ -73,7 +73,7 @@ describe("Atlas Premium Pass", () => {
     const share = jest.spyOn(Share, "share").mockResolvedValue({ action: Share.sharedAction, activityType: null } as never);
     await render(<Handoff steps={[{ email: "joe@example.com", ui: <GiftScreen /> }, { email: "chris@example.com", ui: <RedeemScreen /> }]} />);
     expect(await screen.findByRole("header", { name: "Gift 3 days" })).toBeOnTheScreen();
-    expect(screen.getByRole("radio", { name: "Chris, Voya account · no pass" })).toBeOnTheScreen();
+    expect(screen.getByRole("radio", { name: "Chris, Get Going account · no pass" })).toBeOnTheScreen();
     expect(screen.getByRole("radio", { name: "Daniel, Guest · will need to create an account" })).toBeOnTheScreen();
     expect(screen.getByRole("radio", { name: "Sarah, Already has Atlas Premium Pass · yearly" })).toBeDisabled();
     expect(screen.getByLabelText("Starts: When Chris accepts")).toBeOnTheScreen();
@@ -157,7 +157,7 @@ describe("Permission sheets and offline", () => {
     await fireEvent.press(screen.getByRole("button", { name: /Send my location/ }));
     await fireEvent.press(screen.getByRole("button", { name: "Share my location" }));
     expect(await screen.findByRole("header", { name: "Use your location for directions?" })).toBeOnTheScreen();
-    expect(screen.getByText("Used only while Voya is open. Nothing runs in the background.")).toBeOnTheScreen();
+    expect(screen.getByText("Used only while Get Going is open. Nothing runs in the background.")).toBeOnTheScreen();
     await fireEvent.press(screen.getByRole("button", { name: "Not now · I'll type a starting point" }));
     expect(perm).not.toHaveBeenCalled();
     await waitFor(() => expect(permStore.get().location).toBe("declined"));

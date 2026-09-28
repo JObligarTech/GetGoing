@@ -110,7 +110,7 @@ export function PeopleList({ trip, travelers: initial, groups, userId, userFirst
         })}
         <ListRow onClick={() => { setError(null); setDraft(empty()); }} leading={<span aria-hidden="true" className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-tint text-primary"><UserPlus size={18} /></span>} title="Add traveler" subtitle="A name is enough · no account needed" ariaLabel="Add traveler" />
       </Card>
-      <p className="text-[12.5px] leading-snug text-muted">Guests don&apos;t need a Voya account. They show up in Split, get routes and locations by link, and can join later to see the whole trip.</p>
+      <p className="text-[12.5px] leading-snug text-muted">Guests don&apos;t need a Get Going account. They show up in Split, get routes and locations by link, and can join later to see the whole trip.</p>
       {error && <p role="alert" className="rounded-lg border border-danger/40 bg-danger/10 px-3.5 py-2.5 text-[13px] font-semibold text-danger">{error}</p>}
       <p role="status" className={status ? "text-[13px] font-semibold text-primary" : "sr-only"}>{status}</p>
 

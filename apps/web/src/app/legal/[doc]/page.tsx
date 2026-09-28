@@ -11,14 +11,14 @@ const DOCS: Record<string, { title: string; updated?: string; summary?: { h: str
     summary: [
       { h: "Your trips are yours.", p: "We store your places, notes and receipts only to sync and share with travelers you invite." },
       { h: "Maps, translation and rates come from partners.", p: "OpenStreetMap and our rate and translation providers' terms apply; results can be wrong." },
-      { h: "Split calculates, it doesn't move money.", p: "Travelers settle outside Voya. Claim-link guests accept these terms for that bill only." },
+      { h: "Split calculates, it doesn't move money.", p: "Travelers settle outside Get Going. Claim-link guests accept these terms for that bill only." },
       { h: "Atlas Premium Pass.", p: "A single-trip pass (up to 14 days) is a one-time purchase that ends automatically. Monthly and yearly plans renew until cancelled. Gifted 3-day access and $0.99 extensions never renew. Refunds follow store policy." },
       { h: "Permissions are optional.", p: "Location, mic, camera, photos and contacts are asked for only when needed; every feature has a fallback." },
     ],
     sections: [
-      { h: "Your content", p: "Trips, places and notes you add are yours. We store them to run Voya and never sell them." },
+      { h: "Your content", p: "Trips, places and notes you add are yours. We store them to run Get Going and never sell them." },
       { h: "Partner services", p: "Maps use OpenStreetMap data. Translation, rates and receipts may use third-party providers listed in Licences & credits." },
-      { h: "Split doesn't move money", p: "Split calculates who owes what. Payments happen outside Voya." },
+      { h: "Split doesn't move money", p: "Split calculates who owes what. Payments happen outside Get Going." },
       { h: "Passes and subscriptions", p: "Atlas Premium Pass: Single trip (up to 14 days) $2.99, Monthly $4.99, Yearly $49.99. Single-trip passes end automatically; subscriptions renew until cancelled." },
       { h: "Optional permissions", p: "Location, microphone and camera are only requested for the feature you're using and can be declined." },
     ],
@@ -41,7 +41,7 @@ const DOCS: Record<string, { title: string; updated?: string; summary?: { h: str
   cookies: {
     title: "Cookie Policy",
     sections: [
-      { h: "Essential only", p: "Voya on the web sets sign-in session cookies and a cookie remembering your active trip. Nothing else, and no third-party cookies." },
+      { h: "Essential only", p: "Get Going on the web sets sign-in session cookies and a cookie remembering your active trip. Nothing else, and no third-party cookies." },
       { h: "Preferences", p: "Your theme choice is kept in your browser's local storage, not a cookie." },
     ],
   },
@@ -95,7 +95,7 @@ export default async function LegalDoc({ params }: { params: Promise<{ doc: stri
         ))}
       </div>
       <footer className="text-[12px] text-muted">
-        Voya Labs (placeholder) · 123 Example Street, San Francisco, CA · <a href="mailto:hello@voya.app" className="font-bold text-primary">hello@voya.app</a>
+        Get Going Labs (placeholder) · 123 Example Street, San Francisco, CA · <a href="mailto:hello@getgoing.app" className="font-bold text-primary">hello@getgoing.app</a>
       </footer>
     </main>
   );

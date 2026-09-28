@@ -60,7 +60,7 @@ test.describe("Profile, Settings, permissions and offline (round 6)", () => {
     await page.getByRole("dialog", { name: "Send my location" }).getByRole("button", { name: "Share my location" }).click();
     const sheet = page.getByRole("dialog", { name: "Use your location for directions?" });
     await expect(sheet).toBeVisible();
-    await expect(sheet.getByText("Used only while Voya is open. Nothing runs in the background.")).toBeVisible();
+    await expect(sheet.getByText("Used only while Get Going is open. Nothing runs in the background.")).toBeVisible();
     await expectAccessible(page);
     await sheet.getByRole("button", { name: "Not now · I'll type a starting point" }).click();
     await expect(sheet).toBeHidden();
@@ -74,7 +74,7 @@ test.describe("Profile, Settings, permissions and offline (round 6)", () => {
     await page.getByRole("button", { name: "Speak in English" }).click();
     await expect(mic).toBeHidden(); // asked once per device; the browser prompt (or the unsupported message) comes next
     await page.goto("/settings/permissions");
-    await expect(page.getByText("Declined in Voya · ask again from the feature").first()).toBeVisible();
+    await expect(page.getByText("Declined in Get Going · ask again from the feature").first()).toBeVisible();
     await page.getByRole("button", { name: "Reset" }).click();
     await expect(page.getByText("Not asked yet").first()).toBeVisible();
   });

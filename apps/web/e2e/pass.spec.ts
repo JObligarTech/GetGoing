@@ -40,7 +40,7 @@ test.describe("Atlas Premium Pass (round 6)", () => {
     await expect(page).toHaveURL(/\/pass\/gift$/);
     await expect(page.getByRole("heading", { level: 1, name: "Gift 3 days" })).toBeVisible();
     const who = page.getByRole("radiogroup", { name: "Who gets it" });
-    await expect(who.getByRole("radio", { name: /Chris Voya account · no pass/ })).toHaveAttribute("aria-checked", "true");
+    await expect(who.getByRole("radio", { name: /Chris Get Going account · no pass/ })).toHaveAttribute("aria-checked", "true");
     await expect(who.getByRole("radio", { name: /Daniel Guest · will need to create an account/ })).toBeEnabled();
     await expect(who.getByRole("radio", { name: /Sarah Already has Atlas Premium Pass · yearly/ })).toBeDisabled();
     await expect(page.getByText("When Chris accepts")).toBeVisible();

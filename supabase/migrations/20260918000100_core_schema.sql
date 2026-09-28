@@ -1,4 +1,4 @@
--- Voya core schema: the Trip is the context for everything.
+-- Get Going core schema: the Trip is the context for everything.
 -- Every table hangs off trips and is protected by trip-membership RLS (next migration).
 
 create extension if not exists "pgcrypto";
@@ -56,7 +56,7 @@ create table public.trip_members (
 );
 create index trip_members_user_idx on public.trip_members(user_id);
 
--- ─── Travelers (people on the trip; do NOT need a Voya account) ─────────────
+-- ─── Travelers (people on the trip; do NOT need a Get Going account) ─────────────
 create table public.travelers (
   id          uuid primary key default gen_random_uuid(),
   trip_id     uuid not null references public.trips(id) on delete cascade,

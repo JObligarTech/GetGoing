@@ -12,7 +12,7 @@ test.describe("auth", () => {
     expect(h["referrer-policy"]).toBe("strict-origin-when-cross-origin");
     expect(h["x-powered-by"]).toBeUndefined();
 
-    await expect(page.getByRole("heading", { level: 1, name: "Voya" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Get Going" })).toBeVisible();
     await expect(page.getByText("Your whole trip. One place.")).toBeVisible();
     await expectAccessible(page);
 

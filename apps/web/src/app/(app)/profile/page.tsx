@@ -63,7 +63,7 @@ export default async function ProfilePage() {
         <form action={signOut}>
           <Button type="submit" variant="secondary" full>Sign out</Button>
         </form>
-        <p className="text-center text-[11.5px] text-muted">Voya Labs (placeholder) · <Link href="/legal/terms" className="font-bold text-primary">Legal</Link></p>
+        <p className="text-center text-[11.5px] text-muted">Get Going Labs (placeholder) · <Link href="/legal/terms" className="font-bold text-primary">Legal</Link></p>
       </FadeIn>
     </Page>
   );

@@ -86,7 +86,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   const unlockWithBiometrics = useCallback(async () => {
     if (biometrics === "none") return false;
-    const res = await LocalAuthentication.authenticateAsync({ promptMessage: "Unlock Voya", cancelLabel: "Use password", disableDeviceFallback: true });
+    const res = await LocalAuthentication.authenticateAsync({ promptMessage: "Unlock Get Going", cancelLabel: "Use password", disableDeviceFallback: true });
     if (!res.success) return false;
     if (isDemo) {
       const u = demoUsers.find((x) => x.email === remembered?.email) ?? demoUsers[0]!;

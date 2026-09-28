@@ -7,7 +7,7 @@ test.describe("Navigate (round 2)", () => {
   test("hub: contextual shortcuts and saved routes", async ({ authed: page }) => {
     await page.goto("/navigate");
     await expect(page.getByRole("heading", { level: 1, name: "Navigate" })).toBeVisible();
-    // "Voya already knows": hotel, tonight's dinner, next planned place.
+    // "Get Going already knows": hotel, tonight's dinner, next planned place.
     await expect(page.getByRole("link", { name: "Take me to my hotel: Hotel Gracery Shinjuku" })).toBeVisible();
     await expect(page.getByRole("link", { name: "Tonight's dinner: Afuri Ramen Harajuku" })).toBeVisible();
     await expect(page.getByRole("link", { name: "Next planned: Shibuya Sky" })).toBeVisible();

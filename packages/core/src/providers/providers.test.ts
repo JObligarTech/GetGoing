@@ -27,10 +27,10 @@ describe("real adapters (fetch mocked)", () => {
   it("nominatim maps results and sends a User-Agent", async () => {
     const fetchImpl = vi.fn(async (url: URL | RequestInfo, init?: RequestInit) => {
       expect(String(url)).toContain("countrycodes=jp");
-      expect((init?.headers as Record<string, string>)["User-Agent"]).toContain("Voya");
+      expect((init?.headers as Record<string, string>)["User-Agent"]).toContain("Get Going");
       return new Response(JSON.stringify([{ place_id: 1, lat: "35.6", lon: "139.7", display_name: "Fuglen, Tomigaya, Tokyo", namedetails: { "name:ja": "フグレン" } }]));
     }) as unknown as typeof fetch;
-    const g = createNominatimGeocode({ userAgent: "Voya/test", fetchImpl });
+    const g = createNominatimGeocode({ userAgent: "Get Going/test", fetchImpl });
     const r = await g.search("fuglen", { countryCodes: ["JP"] });
     expect(r[0]).toMatchObject({ provider: "osm", name: "Fuglen", localName: "フグレン", location: { lat: 35.6, lng: 139.7 } });
   });

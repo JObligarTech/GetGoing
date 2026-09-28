@@ -77,7 +77,7 @@ describe("gifting", () => {
   it("candidates explain who can receive it", () => {
     const c = giftCandidates(demoBundle.travelers, demoPassMarks(), DEMO_USER_ID);
     expect(c.map((x) => [x.traveler.name, x.status, x.eligible])).toEqual([
-      ["Chris", "Voya account · no pass", true],
+      ["Chris", "Get Going account · no pass", true],
       ["Daniel", "Guest · will need to create an account", true],
       ["Sarah", "Already has Atlas Premium Pass · yearly", false],
     ]);

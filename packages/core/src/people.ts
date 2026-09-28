@@ -11,11 +11,11 @@ export function travelerKind(t: Pick<TravelerRow, "user_id">, userId: string | n
   return t.user_id ? "account" : "guest";
 }
 
-/** "You · Organizer" / "Voya account" / "Guest". */
+/** "You · Organizer" / "Get Going account" / "Guest". */
 export function travelerStatus(t: Pick<TravelerRow, "user_id">, trip: Pick<TripRow, "owner_id">, userId: string | null): string {
   const kind = travelerKind(t, userId);
   if (kind === "you") return trip.owner_id === userId ? "You · Organizer" : "You";
-  if (kind === "account") return t.user_id === trip.owner_id ? "Organizer" : "Voya account";
+  if (kind === "account") return t.user_id === trip.owner_id ? "Organizer" : "Get Going account";
   return "Guest";
 }
 
@@ -58,5 +58,5 @@ export function nextTravelerColor(existing: Pick<TravelerRow, "color">[]): strin
 
 /** Text for the invite share sheet; the link is the only thing that grants access, and it expires. */
 export function inviteText(tripName: string, inviter: string, url: string): string {
-  return `${inviter} added you to "${tripName}" on Voya. Open this link to see the plan, routes and bills: ${url}\nIt works for 30 days and you'll need a Voya account to join.`;
+  return `${inviter} added you to "${tripName}" on Get Going. Open this link to see the plan, routes and bills: ${url}\nIt works for 30 days and you'll need a Get Going account to join.`;
 }

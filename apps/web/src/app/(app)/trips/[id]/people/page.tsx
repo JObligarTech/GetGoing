@@ -14,7 +14,7 @@ import { requireUser } from "@/lib/session";
 
 export const metadata: Metadata = { title: "People" };
 
-/** People on a trip: with and without Voya accounts, invites, and the groups from tree routes. */
+/** People on a trip: with and without Get Going accounts, invites, and the groups from tree routes. */
 export default async function PeoplePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   if (!z.uuid().safeParse(id).success) notFound();

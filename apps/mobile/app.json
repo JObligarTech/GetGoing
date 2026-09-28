@@ -1,9 +1,9 @@
 {
   "expo": {
-    "name": "Voya",
-    "slug": "voya",
+    "name": "Get Going",
+    "slug": "getgoing",
     "version": "0.1.0",
-    "scheme": "voya",
+    "scheme": "getgoing",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
@@ -14,18 +14,18 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "app.voya.mobile",
+      "bundleIdentifier": "app.getgoing.mobile",
       "infoPlist": {
-        "NSFaceIDUsageDescription": "Voya uses Face ID to let you back in without typing your password.",
-        "NSLocationWhenInUseUsageDescription": "Voya reads your location once when you choose to share it with your travelers. It is never stored.",
+        "NSFaceIDUsageDescription": "Get Going uses Face ID to let you back in without typing your password.",
+        "NSLocationWhenInUseUsageDescription": "Get Going reads your location once when you choose to share it with your travelers. It is never stored.",
         "ITSAppUsesNonExemptEncryption": false,
-        "NSCameraUsageDescription": "Voya uses the camera to translate menus, signs and receipts. Photos are read once and never stored.",
-        "NSPhotoLibraryUsageDescription": "Voya reads a photo you choose to translate it. Nothing is uploaded or kept.",
-        "NSMicrophoneUsageDescription": "Voya uses the microphone for spoken translation when a speech module is installed."
+        "NSCameraUsageDescription": "Get Going uses the camera to translate menus, signs and receipts. Photos are read once and never stored.",
+        "NSPhotoLibraryUsageDescription": "Get Going reads a photo you choose to translate it. Nothing is uploaded or kept.",
+        "NSMicrophoneUsageDescription": "Get Going uses the microphone for spoken translation when a speech module is installed."
       }
     },
     "android": {
-      "package": "app.voya.mobile",
+      "package": "app.getgoing.mobile",
       "adaptiveIcon": {
         "backgroundColor": "#2F5D3A"
       },
@@ -46,7 +46,7 @@
       [
         "expo-local-authentication",
         {
-          "faceIDPermission": "Voya uses Face ID to let you back in without typing your password."
+          "faceIDPermission": "Get Going uses Face ID to let you back in without typing your password."
         }
       ],
       [
@@ -61,14 +61,14 @@
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "Voya reads your location once when you choose to share it with your travelers. It is never stored."
+          "locationWhenInUsePermission": "Get Going reads your location once when you choose to share it with your travelers. It is never stored."
         }
       ],
       [
         "expo-image-picker",
         {
-          "photosPermission": "Voya reads a photo you choose to translate it. Nothing is uploaded or kept.",
-          "cameraPermission": "Voya uses the camera to translate menus, signs and receipts. Photos are read once and never stored."
+          "photosPermission": "Get Going reads a photo you choose to translate it. Nothing is uploaded or kept.",
+          "cameraPermission": "Get Going uses the camera to translate menus, signs and receipts. Photos are read once and never stored."
         }
       ]
     ],

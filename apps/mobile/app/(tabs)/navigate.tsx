@@ -11,7 +11,7 @@ import { useTheme } from "@/lib/theme";
 
 const ICON = { hotel: "home-outline", dinner: "restaurant-outline", next: "location-outline" } as const;
 
-/** Navigate hub — contextual shortcuts ("Voya already knows") and the trip's saved routes. */
+/** Navigate hub — contextual shortcuts ("Get Going already knows") and the trip's saved routes. */
 export default function Navigate() {
   const t = useTheme();
   const s = screenStyles(t);

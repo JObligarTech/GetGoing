@@ -22,7 +22,7 @@ export default async function PermissionsPage({ searchParams }: { searchParams: 
           <Button href="/settings" variant="secondary" size="sm" aria-label="Back to Settings" icon={<ArrowLeft size={18} />}><span className="sr-only">Back</span></Button>
           <PageHeader eyebrow="Settings" title="Permissions" />
         </div>
-        <p className="text-[13.5px] text-muted">Voya asks for each of these the first time a feature needs it. Turn them on or off here or in your browser&apos;s site settings.</p>
+        <p className="text-[13.5px] text-muted">Get Going asks for each of these the first time a feature needs it. Turn them on or off here or in your browser&apos;s site settings.</p>
         <Card className="divide-y divide-line"><Permissions /></Card>
 
         <SectionHeader title="Legal" />

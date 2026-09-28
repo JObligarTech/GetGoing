@@ -10,7 +10,7 @@ test.describe("People (round 5)", () => {
     await expect(page.getByRole("heading", { level: 1, name: "People · 4" })).toBeVisible();
     await expect(page.getByText("You · Organizer · All 14 nights · Home USD")).toBeVisible();
     await expect(page.getByText("Guest · Tokyo only, Mar 15–20 · Home CAD")).toBeVisible();
-    await expect(page.getByText("Voya account · All 14 nights · +1 415 555 0142")).toBeVisible();
+    await expect(page.getByText("Get Going account · All 14 nights · +1 415 555 0142")).toBeVisible();
     // Groups come from the tree route.
     await expect(page.getByText(/Used in .Shibuya afternoon. route/)).toHaveCount(2);
     await expect(page.getByRole("img", { name: "Joe, Sarah" })).toBeVisible();
@@ -38,7 +38,7 @@ test.describe("People (round 5)", () => {
       await page.getByRole("button", { name: "Invite Maya Chen" }).click();
       await expect(page.getByRole("status").filter({ hasText: "Invite link for Maya copied" })).toHaveCount(1);
       const text = await page.evaluate(() => navigator.clipboard.readText());
-      expect(text).toMatch(/Joe added you to "Japan 2027" on Voya.*\/join\/[a-f0-9]{36}/s);
+      expect(text).toMatch(/Joe added you to "Japan 2027" on Get Going.*\/join\/[a-f0-9]{36}/s);
       await expect(page.getByRole("button", { name: "Share invite link again for Maya Chen" })).toBeVisible();
       // The public join page shows the trip and who asked; a signed-in demo user just goes home.
       const url = text.match(/https?:\/\/\S+\/join\/[a-f0-9]{36}/)![0];

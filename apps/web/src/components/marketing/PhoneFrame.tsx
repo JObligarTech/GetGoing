@@ -23,7 +23,7 @@ export function WindowFrame({ shot, alt, className }: { shot: string; alt: strin
     <div className={cx("group overflow-hidden rounded-2xl border border-line bg-surface shadow-[0_30px_80px_-30px_rgba(0,0,0,.45)]", className)}>
       <div aria-hidden="true" className="flex h-9 items-center gap-1.5 border-b border-line bg-canvas px-3.5">
         <span className="h-2.5 w-2.5 rounded-full bg-line-strong" /><span className="h-2.5 w-2.5 rounded-full bg-line-strong" /><span className="h-2.5 w-2.5 rounded-full bg-line-strong" />
-        <span className="ml-3 h-5 flex-1 rounded-md bg-surface px-2 text-[11px] leading-5 text-muted">voya.app/navigate/tree</span>
+        <span className="ml-3 h-5 flex-1 rounded-md bg-surface px-2 text-[11px] leading-5 text-muted">getgoing.app/navigate/tree</span>
       </div>
       <picture>
         <source media="(prefers-color-scheme: dark)" srcSet={`/marketing/${shot}-dark.jpg`} />

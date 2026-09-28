@@ -101,7 +101,7 @@ export default function PeopleScreen() {
           })}
           <ListRow onPress={() => { setStatus({}); setDraft(empty()); }} leading={<IconCoin name="person-add-outline" />} title="Add traveler" subtitle="A name is enough · no account needed" accessibilityLabel="Add traveler" last />
         </Card>
-        <Text style={{ fontSize: 12.5, lineHeight: 17, color: t.textMuted, fontFamily: t.font.regular }}>Guests don&apos;t need a Voya account. They show up in Split, get routes and locations by link, and can join later to see the whole trip.</Text>
+        <Text style={{ fontSize: 12.5, lineHeight: 17, color: t.textMuted, fontFamily: t.font.regular }}>Guests don&apos;t need a Get Going account. They show up in Split, get routes and locations by link, and can join later to see the whole trip.</Text>
         {status.error ? <Text accessibilityRole="alert" style={{ color: t.danger, fontSize: 13, fontFamily: t.font.semibold }}>{status.error}</Text> : null}
         {status.ok ? <Text accessibilityLiveRegion="polite" style={{ color: t.primary, fontSize: 13, fontFamily: t.font.semibold }}>{status.ok}</Text> : null}
 

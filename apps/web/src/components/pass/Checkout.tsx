@@ -13,7 +13,7 @@ const METHODS: PaymentMethod[] = ["apple_pay", "google_pay", "card"];
 
 /**
  * Atlas Premium Pass checkout (mockup 7a): three plans as a radio group, the way to pay, one
- * Pay button. Card details never touch Voya: a real provider takes them on its own sheet.
+ * Pay button. Card details never touch Get Going: a real provider takes them on its own sheet.
  */
 export function Checkout({ trip, action, demo, initialPlan = "yearly" }: {
   trip: { id: string; name: string; start_date: string | null; end_date: string | null } | null;

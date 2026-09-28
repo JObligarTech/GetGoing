@@ -160,7 +160,7 @@ export function billShareText(bill: BillRow, comp: BillComputation, opts: { home
     lines.push(`${p.participant.name}: ${money(p.total)}${home(p.total)}${what ? ` — ${what}` : ""}${p.participant.id === comp.payerId ? " (paid)" : ""}`);
   }
   if (comp.unassigned > 0) lines.push(`Unassigned: ${money(comp.unassigned)}`);
-  lines.push("Sent from Voya · Split doesn't move money");
+  lines.push("Sent from Get Going · Split doesn't move money");
   return lines.join("\n");
 }
 

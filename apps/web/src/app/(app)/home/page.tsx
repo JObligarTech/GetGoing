@@ -35,7 +35,7 @@ export default async function HomePage() {
     return (
       <Page>
         <header><p className="text-[13px] font-medium text-muted">{hello}</p><h1 className="text-[26px] font-extrabold tracking-[-0.02em]">No trips yet</h1></header>
-        <EmptyState title="Start with a trip" body="Voya remembers the trip so you don't have to. Add one and every tool picks up its currency, language and places." action={<Button href="/trips/new">Create a trip</Button>} />
+        <EmptyState title="Start with a trip" body="Get Going remembers the trip so you don't have to. Add one and every tool picks up its currency, language and places." action={<Button href="/trips/new">Create a trip</Button>} />
       </Page>
     );
   }

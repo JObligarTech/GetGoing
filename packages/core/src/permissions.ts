@@ -14,15 +14,15 @@ export interface PermissionCopy {
 export const PERMISSION_COPY: Record<Capability, PermissionCopy> = {
   location: {
     title: "Use your location for directions?",
-    lead: (ctx) => `Voya needs it to route you from where you are${ctx ? ` to ${ctx}` : ""} and to show "Take me to my hotel".`,
-    points: ["Used only while Voya is open. Nothing runs in the background.", "Shared with travelers only when you tap \"Send my location\".", "Never sold or used for ads. Change any time in Settings."],
+    lead: (ctx) => `Get Going needs it to route you from where you are${ctx ? ` to ${ctx}` : ""} and to show "Take me to my hotel".`,
+    points: ["Used only while Get Going is open. Nothing runs in the background.", "Shared with travelers only when you tap \"Send my location\".", "Never sold or used for ads. Change any time in Settings."],
     allow: "Continue",
     decline: "Not now · I'll type a starting point",
     after: (os) => `Next, ${os} will ask you to confirm.`,
   },
   microphone: {
     title: "Allow the microphone for voice translation?",
-    lead: (ctx) => `Speak in English, Voya says it in ${ctx ?? "the trip's language"}. Conversation mode needs it for both people.`,
+    lead: (ctx) => `Speak in English, Get Going says it in ${ctx ?? "the trip's language"}. Conversation mode needs it for both people.`,
     points: ["Listens only while you hold or tap the mic button.", "Audio is sent to the translation service to be transcribed, then discarded. We don't keep recordings.", "Text translation keeps working if you decline."],
     allow: "Allow microphone",
     decline: "Keep typing instead",

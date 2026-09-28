@@ -14,7 +14,7 @@ export default function NewTrip() {
     <View style={s.screen}>
       <View style={[s.content, { paddingTop: insets.top + 8 }]}>
         <PageHeader eyebrow="Trips" title="New trip" />
-        <EmptyState title="Create trips on the web for now" body="Trip creation on mobile arrives with the next round. Trips you create at voya.app sync here." action={<Button variant="secondary" label="Back" onPress={() => router.back()} />} />
+        <EmptyState title="Create trips on the web for now" body="Trip creation on mobile arrives with the next round. Trips you create at getgoing.app sync here." action={<Button variant="secondary" label="Back" onPress={() => router.back()} />} />
       </View>
     </View>
   );

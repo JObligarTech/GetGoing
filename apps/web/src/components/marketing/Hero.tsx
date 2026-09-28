@@ -38,7 +38,7 @@ export function Hero() {
           </h1>
           <p className="font-serif text-[22px] italic leading-snug text-[#C9D3CC] md:text-[26px]">Because the trip is the context for everything.</p>
           <p className="max-w-[52ch] text-[16px] leading-relaxed text-[#C9D3CC] md:text-[17px]">
-            Save the hotel once. Voya carries it into directions, group routes, money and the day&apos;s plan, so you stop typing the same things on the far side of the world.
+            Save the hotel once. Get Going carries it into directions, group routes, money and the day&apos;s plan, so you stop typing the same things on the far side of the world.
           </p>
           <div className="flex flex-wrap gap-3">
             <Button href="/signup" variant="light" size="cta">Create account</Button>
@@ -49,7 +49,7 @@ export function Hero() {
 
         <motion.div style={{ y: phoneY, rotate: phoneRotate }} className="mx-auto w-full max-w-[300px] lg:mx-0 lg:justify-self-end">
           <motion.div animate={reduce ? undefined : { y: [0, -10, 0] }} transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}>
-            <PhoneFrame priority shot="home" alt="Voya Home screen for a trip called Japan 2027: a live map of Tokyo, 12 days away, local and home clocks, the stay at Hotel Gracery Shinjuku, and the places saved for March 15." />
+            <PhoneFrame priority shot="home" alt="Get Going Home screen for a trip called Japan 2027: a live map of Tokyo, 12 days away, local and home clocks, the stay at Hotel Gracery Shinjuku, and the places saved for March 15." />
           </motion.div>
         </motion.div>
       </div>

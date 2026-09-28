@@ -122,7 +122,7 @@ test.describe("core flows (signed in)", () => {
     await page.getByRole("link", { name: "Permissions & legal" }).click(); // round 6: legal and your data live under Permissions
     const dl = page.waitForEvent("download");
     await page.getByRole("link", { name: "Download my data" }).click();
-    expect((await dl).suggestedFilename()).toMatch(/^voya-export-\d{4}-\d{2}-\d{2}\.json$/);
+    expect((await dl).suggestedFilename()).toMatch(/^getgoing-export-\d{4}-\d{2}-\d{2}\.json$/);
 
     await page.getByRole("button", { name: "Delete my account" }).click();
     const dialog = page.getByRole("dialog", { name: "Delete your account?" });

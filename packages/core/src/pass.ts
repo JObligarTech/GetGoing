@@ -184,7 +184,7 @@ export function giftCandidates(travelers: TravelerRow[], marks: PassMarkRow[], g
     if (!traveler.user_id) return { traveler, status: "Guest · will need to create an account", eligible: true };
     const mark = marks.find((m) => m.user_id === traveler.user_id);
     if (mark) return { traveler, status: `Already has Atlas Premium Pass · ${kindLabel(mark.kind).toLowerCase()}`, eligible: false };
-    return { traveler, status: "Voya account · no pass", eligible: true };
+    return { traveler, status: "Get Going account · no pass", eligible: true };
   });
 }
 

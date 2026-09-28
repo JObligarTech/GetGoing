@@ -19,7 +19,7 @@ const TOOLS = [
 ];
 
 /**
- * "Voya remembers": pieces of trip context leave the trip card and land in the tool
+ * "Get Going remembers": pieces of trip context leave the trip card and land in the tool
  * that needs them, one at a time, on a loop. Shared-layout animation moves the very
  * same chip. At rest (and under reduced motion) every chip sits in the trip card.
  */

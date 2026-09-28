@@ -12,10 +12,10 @@ import { ScrubText } from "@/components/marketing/ScrubText";
 import { TreeScene } from "@/components/marketing/TreeScene";
 
 export const metadata: Metadata = {
-  title: "Voya — Your whole trip. One place.",
-  description: "Voya is a travel companion where the trip is the context for everything: the hotel, the saved places, the travelers, the currency and the language flow into directions, group routes and the day's plan.",
+  title: "Get Going — Your whole trip. One place.",
+  description: "Get Going is a travel companion where the trip is the context for everything: the hotel, the saved places, the travelers, the currency and the language flow into directions, group routes and the day's plan.",
   robots: { index: true, follow: true },
-  openGraph: { title: "Voya — Your whole trip. One place.", description: "Save the hotel once. Voya carries it into directions, group routes, money and the day's plan.", type: "website", images: ["/marketing/tree-light.jpg"] },
+  openGraph: { title: "Get Going — Your whole trip. One place.", description: "Save the hotel once. Get Going carries it into directions, group routes, money and the day's plan.", type: "website", images: ["/marketing/tree-light.jpg"] },
 };
 
 function Section({ id, eyebrow, title, children, tone = "canvas", pinned }: { id: string; eyebrow: string; title: string; children: React.ReactNode; tone?: "canvas" | "surface"; pinned?: boolean }) {
@@ -56,7 +56,7 @@ export default function LandingPage() {
       <Hero />
       <Marquee />
 
-      <Section id="context" eyebrow="Set it once. It follows you everywhere." title="Voya remembers the trip, so you don't have to.">
+      <Section id="context" eyebrow="Set it once. It follows you everywhere." title="Get Going remembers the trip, so you don't have to.">
         <Reveal delay={0.05}><ContextFlow /></Reveal>
         <Reveal className="grid gap-6 text-[15px] leading-relaxed text-muted md:grid-cols-3">
           <p><strong className="text-ink">The hotel</strong> is the default start of every route, the &ldquo;take me back&rdquo; on every screen, and the check-in time on the map.</p>
@@ -65,7 +65,7 @@ export default function LandingPage() {
         </Reveal>
       </Section>
 
-      <Section id="navigate" eyebrow="Take me to my hotel. Three words, no typing." title="Directions that start from what Voya already knows." tone="surface">
+      <Section id="navigate" eyebrow="Take me to my hotel. Three words, no typing." title="Directions that start from what Get Going already knows." tone="surface">
         <div className="grid gap-8 lg:grid-cols-[1fr_1fr] lg:items-center">
           <Reveal className="flex flex-col gap-5">
             <NavigateScene />
@@ -88,11 +88,11 @@ export default function LandingPage() {
         </div>
       </Section>
 
-      <Section id="trees" eyebrow="Groups split. Voya keeps the plan together." title="Tree routes: branch, compare, meet again.">
+      <Section id="trees" eyebrow="Groups split. Get Going keeps the plan together." title="Tree routes: branch, compare, meet again.">
         <div className="grid gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-start">
           <Reveal><TreeScene /></Reveal>
           <Reveal delay={0.1} className="flex flex-col gap-5 text-[16px] leading-relaxed text-muted">
-            <ScrubText text="Half the group wants the observation deck; the other half wants the Pokémon Center. Branch after any stop, put people on each side, pick how each group travels, and choose where everyone meets. Voya times both sides and waits for the slower one." />
+            <ScrubText text="Half the group wants the observation deck; the other half wants the Pokémon Center. Branch after any stop, put people on each side, pick how each group travels, and choose where everyone meets. Get Going times both sides and waits for the slower one." />
             <ul className="flex flex-col gap-3">
               {[
                 [GitFork, "Compare the branches", "Door-to-dinner time, walking, fares per person, transfers. “Group B arrives 12 min earlier. Both make the 7:30 reservation.”"],
@@ -157,7 +157,7 @@ export default function LandingPage() {
         <div className="mx-auto flex max-w-6xl flex-col items-start gap-8 px-4 py-28 md:px-7 md:py-40">
           <Reveal className="flex flex-col gap-3">
             <h2 id="cta-title" className="text-[40px] leading-[1.02] font-extrabold tracking-[-0.03em] text-balance md:text-[72px]">Start your first trip.</h2>
-            <p className="font-serif text-[20px] italic text-[#C9D3CC] md:text-[24px]">Add the hotel. Voya takes it from there.</p>
+            <p className="font-serif text-[20px] italic text-[#C9D3CC] md:text-[24px]">Add the hotel. Get Going takes it from there.</p>
           </Reveal>
           <Reveal delay={0.1} className="flex flex-wrap gap-3">
             <Button href="/signup" variant="light" size="cta">Create account</Button>

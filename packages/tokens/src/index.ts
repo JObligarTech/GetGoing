@@ -1,5 +1,5 @@
 /**
- * Voya design tokens — single source of truth for web (CSS variables via
+ * Get Going design tokens — single source of truth for web (CSS variables via
  * tokens.css) and native (theme object). Values are lifted from the Claude
  * Design mockups (green system, Manrope).
  */

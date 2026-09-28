@@ -24,9 +24,9 @@ export function AppShell({ user, children }: { user: ShellUser; children: React.
     <div className="flex min-h-dvh">
       {/* Sidebar / rail */}
       <nav aria-label="Main" className="sticky top-0 hidden h-dvh shrink-0 flex-col gap-1 border-r border-line bg-surface p-3.5 md:flex md:w-[72px] lg:w-[220px] lg:px-3.5 lg:py-5.5">
-        <Link href="/home" className="mb-5 flex items-center gap-2.5 rounded-lg px-2.5 py-1 md:justify-center lg:justify-start" aria-label="Voya home">
-          <Tile name="Voya" size={32} radius={9} />
-          <span className="hidden text-[17px] font-extrabold tracking-[-0.02em] lg:inline">Voya</span>
+        <Link href="/home" className="mb-5 flex items-center gap-2.5 rounded-lg px-2.5 py-1 md:justify-center lg:justify-start" aria-label="Get Going home">
+          <Tile name="Get Going" size={32} radius={9} />
+          <span className="hidden text-[17px] font-extrabold tracking-[-0.02em] lg:inline">Get Going</span>
         </Link>
         {DESKTOP_NAV.map(({ href, label, Icon, premium }) => {
           const active = isActive(pathname, href);

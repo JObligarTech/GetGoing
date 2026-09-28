@@ -308,7 +308,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     if (!bundle || !user) return { error: "No active trip." };
     const t = bundle.travelers.find((x) => x.id === travelerId);
     if (!t || t.user_id) return { error: "Only guests can be invited." };
-    const site = process.env.EXPO_PUBLIC_SITE_URL ?? "https://voya.app";
+    const site = process.env.EXPO_PUBLIC_SITE_URL ?? "https://getgoing.app";
     const existing = bundle.tripInvites.find((i) => i.traveler_id === travelerId && !i.accepted_at && new Date(i.expires_at) > new Date());
     if (existing) return { url: `${site}/join/${existing.token}` };
     if (isDemo) {
@@ -377,7 +377,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   const claimLink = useCallback<DataState["claimLink"]>(async (billId, participantId) => {
     if (!bundle) return { error: "No active trip." };
-    const site = process.env.EXPO_PUBLIC_SITE_URL ?? "https://voya.app";
+    const site = process.env.EXPO_PUBLIC_SITE_URL ?? "https://getgoing.app";
     const p = bundle.billParticipants.find((x) => x.id === participantId && x.bill_id === billId);
     if (!p?.claim_token) return { error: "Couldn't create the link." };
     if (isDemo) {
@@ -442,7 +442,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     const c = giftCandidates(bundle.travelers, bundle.passMarks, user.id).find((x) => x.traveler.id === travelerId);
     if (!c) return { error: "That traveler isn't on this trip." };
     if (!c.eligible) return { error: `${c.traveler.name} already has a pass.` };
-    const site = process.env.EXPO_PUBLIC_SITE_URL ?? "https://voya.app";
+    const site = process.env.EXPO_PUBLIC_SITE_URL ?? "https://getgoing.app";
     let code: string | null;
     if (isDemo) {
       const b = demo.bundles.get(bundle.trip.id)!;

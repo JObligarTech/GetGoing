@@ -7,9 +7,9 @@ import "./globals.css";
 const manrope = Manrope({ subsets: ["latin"], weight: ["400", "500", "600", "700", "800"], variable: "--font-manrope", display: "swap" });
 
 export const metadata: Metadata = {
-  title: { default: "Voya", template: "%s · Voya" },
+  title: { default: "Get Going", template: "%s · Get Going" },
   description: "Your whole trip. One place.",
-  applicationName: "Voya",
+  applicationName: "Get Going",
   robots: { index: false }, // app surface, not marketing
 };
 

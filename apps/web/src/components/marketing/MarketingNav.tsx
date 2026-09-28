@@ -21,9 +21,9 @@ export function MarketingNav() {
   return (
     <header className={cx("fixed inset-x-0 top-0 z-30 transition-colors duration-(--dur-base)", solid ? "border-b border-line bg-surface/90 text-ink backdrop-blur-md" : "text-[#F1F3EF]")}>
       <nav aria-label="Site" className="mx-auto flex h-16 max-w-6xl items-center gap-3 px-4 md:px-7">
-        <Link href="/" className="flex items-center gap-2.5 rounded-lg" aria-label="Voya home">
-          <Tile name="Voya" size={32} radius={9} />
-          <span className="text-[17px] font-extrabold tracking-[-0.02em]">Voya</span>
+        <Link href="/" className="flex items-center gap-2.5 rounded-lg" aria-label="Get Going home">
+          <Tile name="Get Going" size={32} radius={9} />
+          <span className="text-[17px] font-extrabold tracking-[-0.02em]">Get Going</span>
         </Link>
         <ul className="ml-4 hidden items-center gap-1 md:flex">
           {LINKS.map((l) => (

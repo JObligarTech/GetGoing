@@ -10,7 +10,7 @@ import { useTheme } from "@/lib/theme";
 
 /**
  * "Send my location": one foreground position read, an OpenStreetMap link, the OS share
- * sheet. Nothing is stored or sent to Voya's backend.
+ * sheet. Nothing is stored or sent to Get Going's backend.
  */
 export function SendLocation({ travelers, senderName, tz }: { travelers: Traveler[]; senderName: string; tz: string }) {
   const t = useTheme();
@@ -50,7 +50,7 @@ export function SendLocation({ travelers, senderName, tz }: { travelers: Travele
         <Pressable accessibilityLabel="Close" accessibilityRole="button" onPress={() => setOpen(false)} style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.45)" }} />
         <View style={{ backgroundColor: t.canvas, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 16, paddingBottom: 36, gap: 12 }}>
           <Text accessibilityRole="header" style={{ fontSize: 18, fontFamily: t.font.extrabold, color: t.text }}>Send my location</Text>
-          <Text style={{ fontSize: 13, color: t.textMuted, fontFamily: t.font.regular }}>Voya reads your position once and opens your share sheet with a map link. It isn&apos;t stored.</Text>
+          <Text style={{ fontSize: 13, color: t.textMuted, fontFamily: t.font.regular }}>Get Going reads your position once and opens your share sheet with a map link. It isn&apos;t stored.</Text>
           <Card>
             {travelers.map((x, i) => {
               const on = to.includes(x.id);

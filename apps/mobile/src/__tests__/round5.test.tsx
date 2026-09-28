@@ -54,7 +54,7 @@ describe("People", () => {
     expect(screen.getByLabelText("Maya Chen, Guest · Kyoto only, Mar 20–24 · Home SGD")).toBeOnTheScreen();
 
     await fireEvent.press(screen.getByRole("button", { name: "Invite Maya Chen" }));
-    await waitFor(() => expect(share).toHaveBeenCalledWith({ message: expect.stringMatching(/Joe added you to "Japan 2027" on Voya.*\/join\/[a-f0-9]{36}/s) }));
+    await waitFor(() => expect(share).toHaveBeenCalledWith({ message: expect.stringMatching(/Joe added you to "Japan 2027" on Get Going.*\/join\/[a-f0-9]{36}/s) }));
     await waitFor(() => expect(screen.getByRole("button", { name: "Share invite link again for Maya Chen" })).toBeOnTheScreen());
 
     await fireEvent.press(screen.getByRole("button", { name: "Edit Maya Chen" }));

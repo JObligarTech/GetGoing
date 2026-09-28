@@ -29,7 +29,7 @@ export default function GiftScreen() {
   const pick = candidates.find((c) => c.traveler.id === (chosen ?? candidates.find((c) => c.eligible)?.traveler.id)) ?? null;
   const first = pick?.traveler.name.split(" ")[0];
   const mine = bundle.passGifts.find((g) => g.giver_id === user.id && g.status !== "revoked");
-  const site = process.env.EXPO_PUBLIC_SITE_URL ?? "https://voya.app";
+  const site = process.env.EXPO_PUBLIC_SITE_URL ?? "https://getgoing.app";
   const share = async (url: string, name: string) => {
     try { const r = await Share.share({ message: `${name}, you've been gifted 3 days of Atlas Premium Pass on ${active.name}. Accept it here: ${url}` }); const m = r.action === Share.sharedAction ? `Gift link shared with ${name}.` : ""; setStatus(m); if (m) announce(m); } catch { setStatus("Couldn't open the share sheet."); }
   };

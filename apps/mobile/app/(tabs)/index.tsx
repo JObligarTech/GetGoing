@@ -35,7 +35,7 @@ export default function Home() {
         <View style={s.content}>
           <Text style={{ color: t.textMuted, fontSize: 13, fontFamily: t.font.medium }}>{hello}</Text>
           <Text accessibilityRole="header" style={{ fontSize: 26, fontFamily: t.font.extrabold, color: t.text }}>No trips yet</Text>
-          <EmptyState title="Start with a trip" body="Voya remembers the trip so you don't have to." action={<Button label="Create a trip" onPress={() => router.push("/trips/new")} />} />
+          <EmptyState title="Start with a trip" body="Get Going remembers the trip so you don't have to." action={<Button label="Create a trip" onPress={() => router.push("/trips/new")} />} />
         </View>
       </View>
     );

@@ -18,7 +18,7 @@ function label(state: State, key: string, declined: boolean): { text: string; to
   if (state === "granted") return { text: key === "geolocation" ? "While using" : "Allowed", tone: "on" };
   if (state === "denied") return { text: "Off · allow it in your browser's site settings", tone: "off" };
   if (state === "unsupported") return { text: "Not available in this browser", tone: "muted" };
-  if (declined) return { text: "Declined in Voya · ask again from the feature", tone: "muted" };
+  if (declined) return { text: "Declined in Get Going · ask again from the feature", tone: "muted" };
   return { text: "Not asked yet", tone: "muted" };
 }
 
@@ -60,7 +60,7 @@ export function Permissions() {
         );
       })}
       <div className="flex items-center justify-between gap-3 px-3.5 py-3">
-        <span className="text-[12.5px] text-muted">Voya explains each permission once before your browser asks. Reset to see the explanations again.</span>
+        <span className="text-[12.5px] text-muted">Get Going explains each permission once before your browser asks. Reset to see the explanations again.</span>
         <Button variant="ghost" size="sm" onClick={reset} disabled={Object.keys(asked).length === 0}>Reset</Button>
       </div>
     </>

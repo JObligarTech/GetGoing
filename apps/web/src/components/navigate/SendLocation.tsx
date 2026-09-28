@@ -10,7 +10,7 @@ interface Person { id: string; name: string; color: string }
 
 /**
  * "Send my location": reads the device position once, builds an OpenStreetMap link and
- * hands it to the OS share sheet (or the clipboard). Nothing is stored or sent to Voya's
+ * hands it to the OS share sheet (or the clipboard). Nothing is stored or sent to Get Going's
  * backend — the message goes wherever the traveler chooses to send it.
  */
 export function SendLocation({ travelers, senderName, tz }: { travelers: Person[]; senderName: string; tz: string }) {
@@ -63,7 +63,7 @@ export function SendLocation({ travelers, senderName, tz }: { travelers: Person[
       <dialog ref={ref} onClose={() => setOpen(false)} aria-labelledby={id} className="m-auto w-[min(92vw,440px)] rounded-2xl border border-line bg-surface p-0 text-ink shadow-card backdrop:bg-black/50">
         <div className="flex flex-col gap-3 p-4">
           <h2 id={id} className="text-[18px] font-extrabold">Send my location</h2>
-          <p className="text-[13px] text-muted">Voya reads your position once and opens your share sheet with a map link. It isn&apos;t stored.</p>
+          <p className="text-[13px] text-muted">Get Going reads your position once and opens your share sheet with a map link. It isn&apos;t stored.</p>
           <fieldset className="card divide-y divide-line">
             <legend className="sr-only">Who to send it to</legend>
             {travelers.map((t) => (

@@ -11,7 +11,7 @@ import { requireUser } from "@/lib/session";
 
 export const metadata: Metadata = { title: "Navigate" };
 
-/** Navigate hub — contextual shortcuts ("Voya already knows") and the trip's saved routes. */
+/** Navigate hub — contextual shortcuts ("Get Going already knows") and the trip's saved routes. */
 export default async function NavigatePage() {
   const user = await requireUser();
   const active = await getActiveTrip(user.profile.home_tz);

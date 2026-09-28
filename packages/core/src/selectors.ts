@@ -1,5 +1,5 @@
 /**
- * "Voya already knows" — pure functions that derive trip context for every tool.
+ * "Get Going already knows" — pure functions that derive trip context for every tool.
  * No I/O; fully unit-tested.
  */
 import { categoryColors } from "@voya/tokens";

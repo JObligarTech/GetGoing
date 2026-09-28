@@ -15,7 +15,7 @@ import { createOsrmRouting, mockRouting, type RoutingProvider } from "./routing"
 export function resolveProviders(env: { GEOCODE_PROVIDER?: string; FX_PROVIDER?: string; TRANSLATION_PROVIDER?: string; ROUTING_PROVIDER?: string; OSRM_URL?: string; SITE_URL?: string }): Providers & { routing: RoutingProvider } {
   return {
     routing: env.ROUTING_PROVIDER === "osrm" ? createOsrmRouting({ endpoint: env.OSRM_URL }) : mockRouting,
-    geocode: env.GEOCODE_PROVIDER === "nominatim" ? createNominatimGeocode({ userAgent: `Voya/0.1 (${env.SITE_URL ?? "dev"})` }) : mockProviders.geocode,
+    geocode: env.GEOCODE_PROVIDER === "nominatim" ? createNominatimGeocode({ userAgent: `Get Going/0.1 (${env.SITE_URL ?? "dev"})` }) : mockProviders.geocode,
     fx: env.FX_PROVIDER === "frankfurter" ? createFrankfurterFx() : mockProviders.fx,
     translation: mockProviders.translation,
     ocr: mockProviders.ocr,
