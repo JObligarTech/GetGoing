@@ -2,7 +2,7 @@ import { Pressable, ScrollView, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { activePass, billTotal, formatMoney, localDate, navShortcuts, PASS_PRICES, passLabel, pluralize, tripDayNumber } from "@voya/core";
+import { activePass, endedPass, billTotal, formatMoney, localDate, navShortcuts, PASS_PRICES, passLabel, pluralize, tripDayNumber } from "@voya/core";
 import { Button, Card, Chip, EmptyState, Eyebrow, IconCoin, ListRow, PageHeader, Tile, screenStyles } from "@/components/ui";
 import { useData } from "@/lib/data";
 import { useSession } from "@/lib/session";
@@ -26,17 +26,23 @@ export default function SplitHub() {
       <View style={s.screen}>
         <ScrollView contentContainerStyle={[s.content, { paddingTop: insets.top + 8 }]}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>{back}<View style={{ flex: 1 }}><PageHeader eyebrow={`${active.name} · Tools`} title="Split" action={<Chip tone="premium">Atlas</Chip>} /></View></View>
+          {endedPass(entitlements, active.id, now) && (
+            <Card style={{ padding: 14, flexDirection: "row", alignItems: "center", gap: 12 }} accessibilityLiveRegion="polite">
+              <View style={{ flex: 1 }}><Text style={{ fontSize: 15, fontFamily: t.font.semibold, color: t.text }}>Atlas Premium Pass ended</Text><Text style={{ fontSize: 12, color: t.textMuted, fontFamily: t.font.regular }}>Your bills stay readable and shareable.</Text></View>
+              <Button size="sm" label="Upgrade" onPress={() => router.push("/pass")} />
+            </Card>
+          )}
           <Card style={{ padding: 18, gap: 14 }}>
             <View style={{ alignSelf: "flex-start" }}><Chip tone="premium">Atlas Premium Pass</Chip></View>
             <Text accessibilityRole="header" style={{ fontSize: 24, lineHeight: 30, fontFamily: t.font.extrabold, color: t.text, letterSpacing: -0.4 }}>Scan the receipt.{"\n"}Everyone pays their share.</Text>
             {rows.map(([icon, text]) => <View key={text} style={{ flexDirection: "row", alignItems: "center", gap: 12 }}><View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: t.premiumBg, alignItems: "center", justifyContent: "center" }}><Ionicons name={icon} size={18} color={t.premiumText} /></View><Text style={{ flex: 1, fontSize: 14, fontFamily: t.font.semibold, color: t.text }}>{text}</Text></View>)}
-            <Button size="cta" label={`Get Atlas Premium Pass · from $${PASS_PRICES.trip.price}`} onPress={() => router.push("/(tabs)/profile")} />
+            <Button size="cta" label={`Get Atlas Premium Pass · from $${PASS_PRICES.trip.price}`} onPress={() => router.push("/pass")} />
             <Text style={{ textAlign: "center", fontSize: 12.5, fontFamily: t.font.semibold, color: t.textMuted }}>{PASS_PRICES.trip.label} ${PASS_PRICES.trip.price} · {PASS_PRICES.monthly.label} ${PASS_PRICES.monthly.price} · {PASS_PRICES.yearly.label} ${PASS_PRICES.yearly.price}</Text>
           </Card>
           <Card style={{ padding: 14, flexDirection: "row", alignItems: "center", gap: 12 }}>
             <IconCoin name="gift-outline" />
             <View style={{ flex: 1 }}><Text style={{ fontSize: 15, fontFamily: t.font.semibold, color: t.text }}>Been gifted access?</Text><Text style={{ fontSize: 12, color: t.textMuted, fontFamily: t.font.regular }}>Monthly and yearly members can gift one trip 3 days of Atlas Premium Pass. Extend for $0.99 if you need longer.</Text></View>
-            <Button variant="secondary" size="sm" label="Redeem" onPress={() => router.push("/(tabs)/profile")} />
+            <Button variant="secondary" size="sm" label="Redeem" onPress={() => router.push("/pass/redeem")} />
           </Card>
         </ScrollView>
       </View>

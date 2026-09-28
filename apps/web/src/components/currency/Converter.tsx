@@ -155,7 +155,7 @@ export function Converter({ tripId, tripName, countryName: country, homeCurrency
           ) : rateError ? (
             <p role="alert" className="text-[12.5px] font-semibold text-danger">{rateError}</p>
           ) : null}
-          {rate && <p className="text-[12px] opacity-80">{updatedLabel(rate.asOf, now)}{rate.stale ? " · cached, may be out of date" : ""}</p>}
+          {rate && <p className={cx("text-[12px] opacity-80", rate.stale && "stale-rate")}>{updatedLabel(rate.asOf, now)}{rate.stale ? " · cached, may be out of date" : ""}</p>}
         </Card>
 
         <div role="group" aria-label="Quick amounts" className="grid grid-cols-3 gap-2 sm:grid-cols-6">

@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import * as LocalAuthentication from "expo-local-authentication";
-import { DEMO_USER_ID, demoProfile, signInSchema, type Profile } from "@voya/core";
+import { demoUsers, signInSchema, type Profile } from "@voya/core";
 import { getSupabase, isDemo, prefs } from "./supabase";
 
 export interface SessionUser { id: string; email: string | null; profile: Profile }
@@ -17,6 +17,8 @@ interface SessionState {
   unlockWithBiometrics(): Promise<boolean>;
   signOut(): Promise<void>;
   forgetRemembered(): Promise<void>;
+  /** Trip defaults and settings live on the profile; the demo keeps them in memory for the session. */
+  updateProfile(patch: Partial<Pick<Profile, "home_currency" | "home_tz" | "languages" | "units" | "settings" | "theme" | "locale">>): Promise<string | null>;
 }
 
 const Ctx = createContext<SessionState | null>(null);
@@ -66,9 +68,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     const parsed = signInSchema.safeParse({ email, password });
     if (!parsed.success) return "Enter your email and password.";
     if (isDemo) {
-      if (parsed.data.email !== DEMO.email || password !== DEMO.password) return "Email or password is incorrect.";
-      setUser({ id: DEMO_USER_ID, email: DEMO.email, profile: demoProfile });
-      await remember("Joe", DEMO.email);
+      const u = demoUsers.find((x) => x.email === parsed.data.email);
+      if (!u || password !== DEMO.password) return "Email or password is incorrect.";
+      setUser({ id: u.id, email: u.email, profile: u.profile });
+      await remember(u.profile.display_name.split(" ")[0]!, u.email);
       return null;
     }
     const sb = await getSupabase();
@@ -86,12 +89,13 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     const res = await LocalAuthentication.authenticateAsync({ promptMessage: "Unlock Voya", cancelLabel: "Use password", disableDeviceFallback: true });
     if (!res.success) return false;
     if (isDemo) {
-      setUser({ id: DEMO_USER_ID, email: DEMO.email, profile: demoProfile });
+      const u = demoUsers.find((x) => x.email === remembered?.email) ?? demoUsers[0]!;
+      setUser({ id: u.id, email: u.email, profile: u.profile });
       return true;
     }
     if (locked) { setUser(locked); setLocked(null); return true; }
     return false;
-  }, [biometrics, locked]);
+  }, [biometrics, locked, remembered]);
 
   const signOut = useCallback(async () => {
     if (!isDemo) await (await getSupabase()).auth.signOut();
@@ -99,12 +103,22 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     setLocked(null);
   }, []);
 
+  const updateProfile = useCallback<SessionState["updateProfile"]>(async (patch) => {
+    if (!user) return "Not signed in.";
+    if (!isDemo) {
+      const { error } = await (await getSupabase()).from("profiles").update({ ...patch, updated_at: new Date().toISOString() }).eq("id", user.id);
+      if (error) return "Couldn't save your defaults.";
+    }
+    setUser({ ...user, profile: { ...user.profile, ...patch, updated_at: new Date().toISOString() } });
+    return null;
+  }, [user]);
+
   const forgetRemembered = useCallback(async () => {
     setRemembered(null);
     await prefs.del("remembered");
   }, []);
 
-  const value = useMemo<SessionState>(() => ({ ready, user, remembered, biometrics, signIn, unlockWithBiometrics, signOut, forgetRemembered }), [ready, user, remembered, biometrics, signIn, unlockWithBiometrics, signOut, forgetRemembered]);
+  const value = useMemo<SessionState>(() => ({ ready, user, remembered, biometrics, signIn, unlockWithBiometrics, signOut, forgetRemembered, updateProfile }), [ready, user, remembered, biometrics, signIn, unlockWithBiometrics, signOut, forgetRemembered, updateProfile]);
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 

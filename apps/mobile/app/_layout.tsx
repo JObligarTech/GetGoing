@@ -30,6 +30,8 @@ function Root() {
         <Stack.Screen name="currency" />
         <Stack.Screen name="split" />
         <Stack.Screen name="people" />
+        <Stack.Screen name="pass" />
+        <Stack.Screen name="settings" />
       </Stack>
     </>
   );

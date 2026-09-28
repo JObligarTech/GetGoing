@@ -6,6 +6,7 @@ import { compareModes, formatDistance, formatDuration, formatMoney, formatTime, 
 import { categoryColors } from "@voya/tokens";
 import { Map } from "@/components/map/Map";
 import { ModePicker } from "@/components/navigate/ModePicker";
+import { OfflineFallback } from "@/components/navigate/OfflineFallback";
 import { ShareEta } from "@/components/navigate/ShareEta";
 import { StepIcon } from "@/components/navigate/StepIcon";
 import { Button } from "@/components/ui/Button";
@@ -94,6 +95,7 @@ export default async function RoutePage({ searchParams }: { searchParams: Promis
           </div>
         </header>
         {sheet}
+        <OfflineFallback placeId={hotel && to.id !== hotel.id ? hotel.id : to.id} placeName={hotel && to.id !== hotel.id ? hotel.name : to.name} localLanguage={active.local_language} />
         <SectionHeader title="Steps" />
         {steps}
         {shortcuts.length > 0 && (

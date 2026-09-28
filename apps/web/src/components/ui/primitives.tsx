@@ -108,12 +108,12 @@ export function ListRow({ leading, title, subtitle, trailing, href, onClick, act
 }
 
 /** Page title block: eyebrow line above a 26px extrabold heading, action on the right. */
-export function PageHeader({ eyebrow, title, action, as: Tag = "h1" }: { eyebrow?: ReactNode; title: ReactNode; action?: ReactNode; as?: "h1" | "h2" }) {
+export function PageHeader({ eyebrow, title, action, as: Tag = "h1", wrap }: { eyebrow?: ReactNode; title: ReactNode; action?: ReactNode; as?: "h1" | "h2"; wrap?: boolean }) {
   return (
     <header className="flex min-h-11 items-center justify-between gap-3">
       <div className="min-w-0">
         {eyebrow && <p className="text-[13px] font-medium text-muted">{eyebrow}</p>}
-        <Tag className="truncate text-[26px] font-extrabold tracking-[-0.02em]">{title}</Tag>
+        <Tag className={cx("text-[26px] font-extrabold tracking-[-0.02em]", wrap ? "leading-tight text-balance" : "truncate")}>{title}</Tag>
       </div>
       {action}
     </header>

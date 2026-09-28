@@ -1,10 +1,11 @@
 "use client";
 import { useEffect, useId, useRef, useState, useTransition } from "react";
 import { Link2, Pencil, Plus, Send, Trash2, UserPlus } from "lucide-react";
-import { formatDateRange, inviteText, joiningLabel, travelerDetail, travelerKind, type TravelerGroup, type TravelerRow, type TripRow } from "@voya/core";
+import { formatDateRange, inviteText, joiningLabel, markForUser, travelerDetail, travelerKind, type PassMarkRow, type TravelerGroup, type TravelerRow, type TripRow } from "@voya/core";
 import { Button } from "@/components/ui/Button";
 import { Field } from "@/components/ui/Form";
-import { Card, Chip, ListRow, SectionHeader, Tile } from "@/components/ui/primitives";
+import { Card, Chip, ListRow, SectionHeader } from "@/components/ui/primitives";
+import { Avatar } from "@/components/ui/PassMark";
 import { Avatars } from "@/components/navigate/tree/Avatars";
 import { cx } from "@/lib/utils";
 
@@ -16,6 +17,10 @@ export interface PeopleListProps {
   userFirstName: string;
   homeCurrency: string;
   pendingInvites: string[];
+  /** Which members hold a pass (from trip_pass_marks); avatars carry the mark (mockup 8a). */
+  marks?: PassMarkRow[];
+  /** Gift status per traveler id, e.g. "Gift sent · waiting for Chris". */
+  giftNotes?: Record<string, string>;
   addAction: (input: unknown) => Promise<TravelerRow | { error: string }>;
   updateAction: (id: unknown, input: unknown) => Promise<TravelerRow | { error: string }>;
   removeAction: (tripId: unknown, id: unknown) => Promise<{ ok: true } | { error: string }>;
@@ -29,7 +34,7 @@ const empty = (): Draft => ({ id: null, name: "", contact: "", homeCurrency: "",
  * People (mockup 2c): everyone on the trip with how they show up, guests with an Invite
  * link, and the groups tree routes created. Add / edit is a dialog: a name is enough.
  */
-export function PeopleList({ trip, travelers: initial, groups, userId, userFirstName, homeCurrency, pendingInvites, addAction, updateAction, removeAction, inviteAction }: PeopleListProps) {
+export function PeopleList({ trip, travelers: initial, groups, userId, userFirstName, homeCurrency, pendingInvites, marks = [], giftNotes = {}, addAction, updateAction, removeAction, inviteAction }: PeopleListProps) {
   const [travelers, setTravelers] = useState(initial);
   const [draft, setDraft] = useState<Draft | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -89,10 +94,10 @@ export function PeopleList({ trip, travelers: initial, groups, userId, userFirst
           const kind = travelerKind(t, userId);
           return (
             <div key={t.id} className="flex items-center gap-3 px-3.5 py-3">
-              <Tile name={t.name} size={40} radius={999} color={t.color} />
+              <Avatar name={t.name} size={40} color={t.color} mark={markForUser(marks, t.user_id)} />
               <div className="min-w-0 flex-1">
-                <p className="truncate text-[15px] font-semibold">{t.name}</p>
-                <p className="truncate text-[12px] text-muted">{travelerDetail(t, trip, userId, homeCurrency)}</p>
+                <p className="truncate text-[15px] font-semibold">{t.name}{markForUser(marks, t.user_id) && <span className="sr-only">, Atlas Premium Pass</span>}</p>
+                <p className="truncate text-[12px] text-muted">{travelerDetail(t, trip, userId, homeCurrency)}{giftNotes[t.id] ? ` · ${giftNotes[t.id]}` : ""}</p>
               </div>
               {kind === "guest" && (
                 <Button variant={invited.includes(t.id) ? "secondary" : "ghost"} size="sm" icon={invited.includes(t.id) ? <Link2 size={16} /> : <Send size={16} />} onClick={() => invite(t)} loading={pending} aria-label={`${invited.includes(t.id) ? "Share invite link again for" : "Invite"} ${t.name}`}>

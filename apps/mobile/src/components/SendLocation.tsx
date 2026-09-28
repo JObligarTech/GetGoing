@@ -4,6 +4,8 @@ import { Ionicons } from "@expo/vector-icons";
 import * as Location from "expo-location";
 import { initial, type Traveler } from "@voya/core";
 import { Button, Card, Chip, IconCoin, ListRow, announce } from "@/components/ui";
+import { PermissionSheet } from "@/components/PermissionSheet";
+import { markPrompt, needsPrompt } from "@/lib/offline";
 import { useTheme } from "@/lib/theme";
 
 /**
@@ -16,7 +18,11 @@ export function SendLocation({ travelers, senderName, tz }: { travelers: Travele
   const [to, setTo] = useState<string[]>(() => travelers.map((x) => x.id));
   const [status, setStatus] = useState<{ text?: string; error?: string; busy?: boolean }>({});
 
-  const send = async () => {
+  const [ask, setAsk] = useState(false);
+  // The explanation sheet comes before the OS prompt, once per device (mockup 7a).
+  // The dialog steps aside while the sheet is up (one modal at a time for screen readers), then returns.
+  const send = async () => { if (needsPrompt("location")) { setOpen(false); setAsk(true); } else await locate(); };
+  const locate = async () => {
     setStatus({ busy: true });
     try {
       const perm = await Location.requestForegroundPermissionsAsync();
@@ -38,6 +44,7 @@ export function SendLocation({ travelers, senderName, tz }: { travelers: Travele
 
   return (
     <>
+      <PermissionSheet cap="location" visible={ask} onAllow={() => { markPrompt("location", true); setAsk(false); setOpen(true); void locate(); }} onDecline={() => { markPrompt("location", false); setAsk(false); setOpen(true); }} />
       <ListRow onPress={() => setOpen(true)} leading={<IconCoin name="paper-plane-outline" />} title="Send my location" subtitle={`to ${travelers.map((x) => x.name.split(" ")[0]).join(", ") || "your travelers"}`} trailing={<Chip>Live</Chip>} last />
       <Modal visible={open} transparent animationType="slide" onRequestClose={() => setOpen(false)} accessibilityViewIsModal>
         <Pressable accessibilityLabel="Close" accessibilityRole="button" onPress={() => setOpen(false)} style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.45)" }} />

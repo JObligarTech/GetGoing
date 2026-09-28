@@ -1,11 +1,15 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import type { PassMark } from "@voya/core";
 import { Tile } from "@/components/ui/primitives";
+import { Avatar, PassStar } from "@/components/ui/PassMark";
 import { cx } from "@/lib/utils";
+import { OfflineBanner, OfflineSync } from "./Offline";
+import type { OfflineSummary } from "@/lib/offline";
 import { DESKTOP_NAV, PHONE_NAV, isActive } from "./nav";
 
-export interface ShellUser { name: string; tripName: string | null }
+export interface ShellUser { name: string; tripName: string | null; mark: PassMark; offline: Omit<OfflineSummary, "savedAt"> | null }
 
 /**
  * Responsive shell:
@@ -31,7 +35,7 @@ export function AppShell({ user, children }: { user: ShellUser; children: React.
               key={href}
               href={href}
               aria-current={active ? "page" : undefined}
-              aria-label={premium ? `${label}, Premium` : undefined}
+              aria-label={premium ? `${label}, ${user.mark ? "unlocked" : "Premium"}` : undefined}
               title={label}
               className={cx(
                 "flex items-center gap-3 rounded-lg px-3 py-2.5 text-[14px] transition-colors duration-(--dur-fast) md:justify-center lg:justify-start",
@@ -40,12 +44,12 @@ export function AppShell({ user, children }: { user: ShellUser; children: React.
             >
               <Icon aria-hidden="true" size={20} strokeWidth={active ? 2.2 : 1.9} />
               <span className="hidden flex-1 lg:inline">{label}</span>
-              {premium && <span aria-hidden="true" className="hidden rounded-sm bg-premium-bg px-1.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-premium-text lg:inline">Premium</span>}
+              {premium && (user.mark ? <PassStar size={12} className="hidden text-premium lg:inline" /> : <span aria-hidden="true" className="hidden rounded-sm bg-premium-bg px-1.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-premium-text lg:inline">Premium</span>)}
             </Link>
           );
         })}
         <div className="mt-auto flex items-center gap-2.5 rounded-lg bg-canvas p-3 md:justify-center lg:justify-start">
-          <Tile name={user.name} size={36} radius={999} className="border-2 border-surface" />
+          <Avatar name={user.name} size={36} mark={user.mark} />
           <div className="hidden min-w-0 lg:block">
             <p className="truncate text-[13px] font-bold">{user.name}</p>
             <p className="truncate text-[11.5px] text-muted">
@@ -56,6 +60,8 @@ export function AppShell({ user, children }: { user: ShellUser; children: React.
       </nav>
 
       <div className="flex min-w-0 flex-1 flex-col">
+        <OfflineSync summary={user.offline} />
+        <OfflineBanner />
         <main id="main" tabIndex={-1} className="flex-1 pb-[calc(84px+env(safe-area-inset-bottom))] md:pb-0">
           {children}
         </main>

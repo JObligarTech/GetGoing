@@ -3,6 +3,7 @@ export * from "./mock";
 export { createNominatimGeocode } from "./nominatim";
 export { createFrankfurterFx } from "./frankfurter";
 export * from "./routing";
+export * from "./billing";
 
 import { mockProviders } from "./mock";
 import { createFrankfurterFx } from "./frankfurter";

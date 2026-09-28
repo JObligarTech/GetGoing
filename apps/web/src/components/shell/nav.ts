@@ -32,5 +32,6 @@ export const DESKTOP_NAV: NavItem[] = [
 export function isActive(pathname: string, href: string, layout: "phone" | "desktop" = "desktop"): boolean {
   if (layout === "phone" && href === "/trips" && pathname.startsWith("/plan")) return true;
   if (layout === "phone" && href === "/tools" && ["/translate", "/currency", "/split"].some((p) => pathname.startsWith(p))) return true;
+  if (href === "/profile" && ["/settings", "/pass"].some((p) => pathname.startsWith(p))) return true;
   return pathname === href || pathname.startsWith(`${href}/`);
 }

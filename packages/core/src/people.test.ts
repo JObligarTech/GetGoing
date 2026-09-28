@@ -8,11 +8,11 @@ describe("people", () => {
   it("describes each traveler like the mockup", () => {
     const [joe, chris, daniel, sarah] = demoBundle.travelers;
     expect(travelerStatus(joe!, trip, DEMO_USER_ID)).toBe("You · Organizer");
-    expect(travelerStatus(chris!, trip, DEMO_USER_ID)).toBe("Guest");
+    expect(travelerStatus(chris!, trip, DEMO_USER_ID)).toBe("Voya account");
     expect(travelerDetail(joe!, trip, DEMO_USER_ID, "USD")).toBe("You · Organizer · All 14 nights · Home USD");
     expect(travelerDetail(daniel!, trip, DEMO_USER_ID)).toBe("Guest · Tokyo only, Mar 15–20 · Home CAD");
-    expect(travelerDetail(sarah!, trip, DEMO_USER_ID)).toBe("Guest · All 14 nights · +1 415 555 0142");
-    expect(travelerDetail(chris!, trip, DEMO_USER_ID)).toBe("Guest · All 14 nights · chris@example.com");
+    expect(travelerDetail(sarah!, trip, DEMO_USER_ID)).toBe("Voya account · All 14 nights · +1 415 555 0142");
+    expect(travelerDetail(chris!, trip, DEMO_USER_ID)).toBe("Voya account · All 14 nights · chris@example.com");
     expect(joiningLabel({ joining_start: "2027-03-18", joining_end: null, joining_note: null }, trip)).toBe("Mar 18–29");
     expect(joiningLabel({ joining_start: null, joining_end: null, joining_note: null }, { start_date: null, end_date: null })).toBe("Whole trip");
   });

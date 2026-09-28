@@ -74,6 +74,8 @@ body {
 }
 
 /* Utilities that the mockups rely on repeatedly. */
+/* A rate that may be out of date is shown with a dashed underline everywhere (mockup 6b). */
+.stale-rate { text-decoration: underline dashed; text-decoration-thickness: 1px; text-underline-offset: 3px; }
 .text-eyebrow { font-size: 12px; font-weight: 700; color: var(--c-text-muted); text-transform: uppercase; letter-spacing: 0.08em; }
 .card { background: var(--c-surface); border: 1px solid var(--c-border); border-radius: 14px; overflow: hidden; }
 .raised { background: var(--c-surface-raised); box-shadow: var(--c-shadow); color: var(--c-text); }

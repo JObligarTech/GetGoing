@@ -2,7 +2,7 @@
  * Split — receipt parsing, bill maths (shared items, tax, service, discounts, rounding),
  * claim-link views and the Atlas Premium Pass check. Pure functions; no I/O.
  */
-import type { BillItemRow, BillParticipantRow, BillRow, BillShareRow, EntitlementRow } from "./db/database.types";
+import type { BillItemRow, BillParticipantRow, BillRow, BillShareRow } from "./db/database.types";
 import { formatMoney } from "./format";
 import { roundMoney } from "./money";
 import type { OcrLine } from "./providers/types";
@@ -198,21 +198,4 @@ export function claimShare(view: ClaimView, chosen: Set<string>): { total: numbe
   ] as BillShareRow[];
   const me = computeBill(bill, items, participants, shares).participants.find((p) => p.participant.id === view.you.id);
   return { total: me?.total ?? 0, itemsTotal: me?.itemsTotal ?? 0, tax: (me?.tax ?? 0) + (me?.service ?? 0) };
-}
-
-// ─── Atlas Premium Pass ──────────────────────────────────────────────────────
-export const PASS_PRICES = { trip: { label: "Single trip", price: 2.99, note: "up to 14 days" }, monthly: { label: "Monthly", price: 4.99, note: "renews" }, yearly: { label: "Yearly", price: 49.99, note: "renews" } } as const;
-
-/** The entitlement that unlocks Split for this trip right now, if any. */
-export function activePass(entitlements: EntitlementRow[], tripId: string | null, now: Date): EntitlementRow | null {
-  const t = now.getTime();
-  return entitlements
-    .filter((e) => new Date(e.starts_at).getTime() <= t && new Date(e.ends_at).getTime() > t && (e.trip_id == null || e.trip_id === tripId))
-    .sort((a, b) => new Date(b.ends_at).getTime() - new Date(a.ends_at).getTime())[0] ?? null;
-}
-
-export function passLabel(e: EntitlementRow, now: Date): string {
-  const days = Math.max(0, Math.ceil((new Date(e.ends_at).getTime() - now.getTime()) / 86_400_000));
-  const kind = e.kind === "gift" ? "Gifted" : e.kind === "trip" ? "Single trip" : e.kind === "monthly" ? "Monthly" : "Yearly";
-  return `${kind} · ${days === 1 ? "1 day" : `${days} days`} left`;
 }

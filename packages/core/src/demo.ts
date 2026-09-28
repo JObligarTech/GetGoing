@@ -3,15 +3,26 @@
  * without Supabase (e2e tests, Storybook-style previews, Expo Go without keys).
  */
 import type { TripBundle } from "./domain";
-import type { EntitlementRow, ProfileRow, TravelerRow, TripRow } from "./db/database.types";
+import type { EntitlementRow, PassMarkRow, ProfileRow, TravelerRow, TripRow } from "./db/database.types";
 
 export const DEMO_USER_ID = "11111111-1111-4111-8111-111111111111";
+/** Chris has an account but no pass (the gift recipient in the mockups); Sarah holds her own yearly pass. */
+export const DEMO_CHRIS_ID = "11111111-1111-4111-8111-111111111112";
+export const DEMO_SARAH_ID = "11111111-1111-4111-8111-111111111114";
 export const DEMO_TRIP_ID = "22222222-2222-4222-8222-222222222221";
+/** Fixed "now" used by demo mode so countdowns match the mockups (12 days away). */
+export const DEMO_NOW = new Date("2027-03-03T05:41:00Z");
 
 export const demoProfile: ProfileRow = {
   id: DEMO_USER_ID, display_name: "Joe Obligar", avatar_url: null, home_currency: "USD", home_tz: "America/Los_Angeles",
-  locale: "en", theme: "system", marketing_opt_in: false, created_at: "2026-09-01T00:00:00Z", updated_at: "2026-09-01T00:00:00Z",
+  locale: "en", theme: "system", marketing_opt_in: false, units: "km", languages: ["en", "tl"], settings: {}, created_at: "2026-09-01T00:00:00Z", updated_at: "2026-09-01T00:00:00Z",
 };
+export const demoChrisProfile: ProfileRow = { ...demoProfile, id: DEMO_CHRIS_ID, display_name: "Chris Park", home_tz: "America/New_York", languages: ["en", "ko"] };
+/** Demo sign-ins (password VoyaDemo-2027! for both). Demo mode only; the seed never runs in production. */
+export const demoUsers: { id: string; email: string; profile: ProfileRow }[] = [
+  { id: DEMO_USER_ID, email: "joe@example.com", profile: demoProfile },
+  { id: DEMO_CHRIS_ID, email: "chris@example.com", profile: demoChrisProfile },
+];
 
 const ts = "2026-09-01T00:00:00Z";
 const trip = (t: Partial<TripRow> & Pick<TripRow, "id" | "name">): TripRow => ({
@@ -38,13 +49,28 @@ const place = (id: string, name: string, local_name: string, address: string, lo
   hours: null, notes: null, priority, created_by: DEMO_USER_ID, created_at: ts, updated_at: ts,
 });
 
+const ent = (e: Partial<EntitlementRow> & Pick<EntitlementRow, "id" | "user_id" | "kind" | "ends_at">): EntitlementRow => ({
+  trip_id: null, starts_at: "2026-09-01T00:00:00Z", gifted_by: null, source: "seed", created_at: "2026-09-01T00:00:00Z", gift_id: null, plan_ref: null, paid_with: "Apple Pay ·· 4421", amount: 49.99, currency: "USD", ...e,
+});
+/** Joe and Sarah hold yearly passes, so Split is open for Joe in demo mode; Chris has none (he's the one Joe gifts). */
+export const demoAllEntitlements: EntitlementRow[] = [
+  ent({ id: "e1", user_id: DEMO_USER_ID, kind: "yearly", ends_at: "2027-09-01T00:00:00Z" }),
+  ent({ id: "e2", user_id: DEMO_SARAH_ID, kind: "yearly", ends_at: "2027-12-01T00:00:00Z", starts_at: "2026-12-01T00:00:00Z", created_at: "2026-12-01T00:00:00Z" }),
+];
+export const demoEntitlements: EntitlementRow[] = demoAllEntitlements.filter((e) => e.user_id === DEMO_USER_ID);
+export function demoPassMarks(entitlements: EntitlementRow[] = demoAllEntitlements, now = DEMO_NOW): PassMarkRow[] {
+  const t = now.getTime();
+  return entitlements.filter((e) => new Date(e.starts_at).getTime() <= t && new Date(e.ends_at).getTime() > t).map((e) => ({ user_id: e.user_id, kind: e.kind }));
+}
+
+/** A settled bill from the Lisbon trip, for the hub's "Past splits". */
 export const demoBundle: TripBundle = {
   trip: demoTrips[0]!,
   travelers: [
     { ...traveler, id: "t1", user_id: DEMO_USER_ID, name: "Joe Obligar", color: "#2F5D3A" },
-    { ...traveler, id: "t2", name: "Chris", color: "#E0703A", email: "chris@example.com" },
+    { ...traveler, id: "t2", user_id: DEMO_CHRIS_ID, name: "Chris", color: "#E0703A", email: "chris@example.com" },
     { ...traveler, id: "t3", name: "Daniel", color: "#5568C9", home_currency: "CAD", joining_start: "2027-03-15", joining_end: "2027-03-20", joining_note: "Tokyo only" },
-    { ...traveler, id: "t4", name: "Sarah", color: "#C9516F", phone: "+1 415 555 0142" },
+    { ...traveler, id: "t4", user_id: DEMO_SARAH_ID, name: "Sarah", color: "#C9516F", phone: "+1 415 555 0142" },
   ],
   categories: [
     { id: C(4), trip_id: T, name: "Must visit", icon: "star", color: "#2F5D3A", sort_order: 0, created_at: ts },
@@ -127,17 +153,11 @@ export const demoBundle: TripBundle = {
     { item_id: BI(3), participant_id: BP(1), bill_id: AFURI_BILL, trip_id: T }, { item_id: BI(3), participant_id: BP(3), bill_id: AFURI_BILL, trip_id: T },
     { item_id: BI(5), participant_id: BP(2), bill_id: AFURI_BILL, trip_id: T },
   ],
+  passGifts: [],
+  passMarks: demoPassMarks(),
 };
 
-/** The demo account holds a yearly Atlas Premium Pass, so Split is open in demo mode. */
-export const demoEntitlements: EntitlementRow[] = [
-  { id: "e1", user_id: DEMO_USER_ID, kind: "yearly", trip_id: null, starts_at: "2026-09-01T00:00:00Z", ends_at: "2027-09-01T00:00:00Z", gifted_by: null, source: "seed", created_at: "2026-09-01T00:00:00Z" },
-];
-
-/** A settled bill from the Lisbon trip, for the hub's "Past splits". */
 export const demoPastBills = [
   { id: "99999999-9999-4999-8999-999999999992", trip_id: "22222222-2222-4222-8222-222222222222", place_id: null, merchant: "Time Out Market", currency: "EUR", status: "settled" as const, bill_date: "2026-06-05", tax_amount: 0, tax_label: null, service_amount: 15.1, discount_amount: 0, rounding_unit: 0.01, tax_mode: "proportional" as const, paid_by: null, receipt_pages: 1, created_by: DEMO_USER_ID, created_at: "2026-06-05T20:10:00Z", updated_at: "2026-06-05T21:00:00Z", closed_at: "2026-06-05T21:00:00Z", trip_name: "Lisbon 2026", people: 3 },
 ];
 
-/** Fixed "now" used by demo mode so countdowns match the mockups (12 days away). */
-export const DEMO_NOW = new Date("2027-03-03T05:41:00Z");

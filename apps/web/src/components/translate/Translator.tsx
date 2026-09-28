@@ -4,10 +4,13 @@ import Link from "next/link";
 import type { Route } from "next";
 import { Bookmark, BookmarkCheck, Camera, Car, Languages, MessageSquareText, Mic, MicOff, Sparkles, Trash2 } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
-import { languageByCode, type ContextPhrase, type Language, type Phrase, type Translation } from "@voya/core";
+import { languageByCode, mockTranslation, type ContextPhrase, type Language, type Phrase, type Translation } from "@voya/core";
+import { WifiOff } from "lucide-react";
+import { PermissionPrompt, needsPrompt } from "@/components/ui/PermissionPrompt";
+import { packsStore } from "@/lib/offline";
 import { Button } from "@/components/ui/Button";
 import { Card, Chip, IconCoin, ListRow, PageHeader, SectionHeader } from "@/components/ui/primitives";
-import { useCapability } from "@/lib/local-store";
+import { useCapability, useOnline } from "@/lib/local-store";
 import { canRecognize, createRecognizer, type Recognizer } from "@/lib/speech";
 import { cx } from "@/lib/utils";
 import { CopyButton, LanguageBar, SpeakButton } from "./shared";
@@ -43,6 +46,9 @@ export function Translator({ tripId, tripName, pair, phrases: initialPhrases, co
   const [error, setError] = useState<string | null>(null);
   const [listening, setListening] = useState(false);
   const micAvailable = useCapability(canRecognize);
+  const online = useOnline();
+  const packs = packsStore.use();
+  const [askMic, setAskMic] = useState(false);
   const [pending, start] = useTransition();
   const recognizer = useRef<Recognizer | null>(null);
   const textareaId = useId();
@@ -52,12 +58,13 @@ export function Translator({ tripId, tripName, pair, phrases: initialPhrases, co
     const trimmed = t.trim();
     if (!trimmed) { setResult(null); setError(null); return; }
     start(async () => {
-      const r = await translateAction({ text: trimmed, from: f.code, to: tt.code });
+      // Offline: the text pack is the on-device phrasebook, so typing keeps working (mockup 6b).
+      const r = online ? await translateAction({ text: trimmed, from: f.code, to: tt.code }) : await mockTranslation.translate(trimmed, f.code, tt.code);
       if ("error" in r) { setError(r.error); return; }
       setError(null);
       setResult({ ...r, source_text: trimmed, from: f.code, to: tt.code });
     });
-  }, [translateAction]);
+  }, [translateAction, online]);
 
   // Auto-translate after a pause in typing (the button and ⌘/Ctrl+Enter translate immediately).
   useEffect(() => {
@@ -103,6 +110,11 @@ export function Translator({ tripId, tripName, pair, phrases: initialPhrases, co
 
   const toggleMic = () => {
     if (listening) { recognizer.current?.stop(); return; }
+    if (!online) { setError("Speech needs internet. Type instead, or show the phrase."); return; }
+    if (needsPrompt("microphone")) { setAskMic(true); return; }
+    startMic();
+  };
+  const startMic = () => {
     const r = createRecognizer(from.speech, {
       onResult: (t, final) => { setText(t); if (final) run(t, from, to); },
       onEnd: () => { setListening(false); recognizer.current = null; },
@@ -113,12 +125,21 @@ export function Translator({ tripId, tripName, pair, phrases: initialPhrases, co
   };
 
   const remaining = MAX - text.length;
+  const langPack = packs[`lang:${to.code}`] ? `${to.name} pack` : "phrasebook";
+  const offlineCard = !online && (
+    <Card className="flex flex-col divide-y divide-line" aria-label="Unavailable right now">
+      <p className="flex items-center gap-2 px-3.5 py-2.5 text-[12px] font-bold text-muted uppercase tracking-wide"><WifiOff aria-hidden="true" size={14} />Unavailable right now</p>
+      <ListRow title="Voice & Conversation" subtitle="Type instead, or show the phrase" />
+      <ListRow title="Camera translation" subtitle="Photos are saved and translated when you're back online" trailing={<Chip tone="plain">queued</Chip>} />
+      <ListRow title="Split receipt scan" subtitle="Snap now, split later" />
+    </Card>
+  );
   const contextIcon = { driver: <Car size={20} />, phrase: <Sparkles size={20} />, camera: <Camera size={20} /> };
 
   return (
     <div className="mx-auto flex w-full max-w-[1100px] flex-col gap-3.5 px-4 pt-4 pb-6 md:px-7 md:pt-7 lg:grid lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start lg:gap-x-8">
       <div className="flex flex-col gap-3.5 lg:col-start-1">
-        <PageHeader eyebrow={tripName} title="Translate" action={<Chip>{to.native} ready</Chip>} />
+        <PageHeader eyebrow={tripName} title="Translate" action={online ? <Chip>{to.native} ready</Chip> : <Chip tone="ink">Offline</Chip>} />
         <LanguageBar from={from} to={to} reason={reason} onChange={changeLang} onSwap={swap} />
 
         <Card className="flex flex-col gap-2 p-3.5">
@@ -147,6 +168,9 @@ export function Translator({ tripId, tripName, pair, phrases: initialPhrases, co
 
         {error && <p role="alert" className="rounded-lg border border-danger/40 bg-danger/10 px-3.5 py-2.5 text-[13px] font-semibold text-danger">{error}</p>}
         <p role="status" className={status ? "text-[13px] font-semibold text-primary" : "sr-only"}>{status}</p>
+        {!online && <p className="text-[12.5px] font-semibold text-muted">Text translation works offline · {langPack}</p>}
+        {offlineCard}
+        {askMic && <PermissionPrompt cap="microphone" context={to.name} onAllow={() => { setAskMic(false); startMic(); }} onDecline={() => setAskMic(false)} />}
 
         {result && (
             <motion.section

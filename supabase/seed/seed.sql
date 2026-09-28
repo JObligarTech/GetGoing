@@ -108,9 +108,25 @@ update public.travelers set email = 'chris@example.com' where trip_id = '2222222
 update public.travelers set home_currency = 'CAD', joining_start = '2027-03-15', joining_end = '2027-03-20', joining_note = 'Tokyo only' where trip_id = '22222222-2222-4222-8222-222222222221' and name = 'Daniel';
 update public.travelers set phone = '+1 415 555 0142' where trip_id = '22222222-2222-4222-8222-222222222221' and name = 'Sarah';
 
--- The demo account holds a yearly Atlas Premium Pass so Split is open.
-insert into public.entitlements (user_id, kind, starts_at, ends_at, source) values
-  ('11111111-1111-4111-8111-111111111111', 'yearly', '2026-09-01', '2027-09-01', 'seed');
+-- Two more demo accounts (same password, local only): Chris has no pass (the gift recipient), Sarah holds her own yearly.
+insert into auth.users (id, instance_id, aud, role, email, encrypted_password, email_confirmed_at, raw_user_meta_data, created_at, updated_at) values
+  ('11111111-1111-4111-8111-111111111112', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'chris@example.com', crypt('VoyaDemo-2027!', gen_salt('bf')), now(), '{"display_name":"Chris Park"}', now(), now()),
+  ('11111111-1111-4111-8111-111111111114', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'sarah@example.com', crypt('VoyaDemo-2027!', gen_salt('bf')), now(), '{"display_name":"Sarah Lin"}', now(), now());
+insert into auth.identities (id, user_id, provider_id, provider, identity_data, last_sign_in_at, created_at, updated_at) values
+  (gen_random_uuid(), '11111111-1111-4111-8111-111111111112', '11111111-1111-4111-8111-111111111112', 'email', '{"sub":"11111111-1111-4111-8111-111111111112","email":"chris@example.com"}', now(), now(), now()),
+  (gen_random_uuid(), '11111111-1111-4111-8111-111111111114', '11111111-1111-4111-8111-111111111114', 'email', '{"sub":"11111111-1111-4111-8111-111111111114","email":"sarah@example.com"}', now(), now(), now());
+update public.profiles set home_tz = 'America/New_York', languages = '{en,ko}' where id = '11111111-1111-4111-8111-111111111112';
+update public.profiles set languages = '{en,tl}' where id = '11111111-1111-4111-8111-111111111111';
+insert into public.trip_members (trip_id, user_id, role) values
+  ('22222222-2222-4222-8222-222222222221', '11111111-1111-4111-8111-111111111112', 'editor'),
+  ('22222222-2222-4222-8222-222222222221', '11111111-1111-4111-8111-111111111114', 'editor');
+update public.travelers set user_id = '11111111-1111-4111-8111-111111111112' where trip_id = '22222222-2222-4222-8222-222222222221' and name = 'Chris';
+update public.travelers set user_id = '11111111-1111-4111-8111-111111111114' where trip_id = '22222222-2222-4222-8222-222222222221' and name = 'Sarah';
+
+-- Joe and Sarah hold yearly Atlas Premium Passes so Split is open; Chris has none.
+insert into public.entitlements (user_id, kind, starts_at, ends_at, source, paid_with, amount, currency) values
+  ('11111111-1111-4111-8111-111111111111', 'yearly', '2026-09-01', '2027-09-01', 'seed', 'Apple Pay ·· 4421', 49.99, 'USD'),
+  ('11111111-1111-4111-8111-111111111114', 'yearly', '2026-12-01', '2027-12-01', 'seed', 'Card ·· 0007', 49.99, 'USD');
 
 -- Tonight's dinner, mid-split (mockup 5b): Joe paid, Chris claimed by link, Daniel opened his, Coke unassigned.
 insert into public.bills (id, trip_id, place_id, merchant, currency, status, bill_date, tax_amount, tax_label, receipt_pages, created_by) values

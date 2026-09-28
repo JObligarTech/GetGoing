@@ -31,6 +31,7 @@ jest.mock("expo-local-authentication", () => ({
 }));
 jest.mock("expo-location", () => ({
   requestForegroundPermissionsAsync: jest.fn(async () => ({ status: "granted" })),
+  getForegroundPermissionsAsync: jest.fn(async () => ({ status: "granted" })),
   getCurrentPositionAsync: jest.fn(async () => ({ coords: { latitude: 35.6951, longitude: 139.7006, accuracy: 5 } })),
   Accuracy: { High: 4 },
 }));
@@ -48,9 +49,12 @@ jest.mock("expo-clipboard", () => ({ setStringAsync: jest.fn(async () => true), 
 jest.mock("expo-image-picker", () => ({
   requestCameraPermissionsAsync: jest.fn(async () => ({ status: "granted", granted: true })),
   requestMediaLibraryPermissionsAsync: jest.fn(async () => ({ status: "granted", granted: true })),
+  getCameraPermissionsAsync: jest.fn(async () => ({ status: "granted", granted: true })),
+  getMediaLibraryPermissionsAsync: jest.fn(async () => ({ status: "granted", granted: true, accessPrivileges: "limited" })),
   launchCameraAsync: jest.fn(async () => ({ canceled: false, assets: [{ uri: "file:///tmp/menu.jpg", width: 600, height: 800, mimeType: "image/jpeg", fileSize: 1024 }] })),
   launchImageLibraryAsync: jest.fn(async () => ({ canceled: true, assets: null })),
 }));
 
 // Demo saves re-render the whole provider tree; give async queries a little more room under a parallel run.
 require("@testing-library/react-native").configure({ asyncUtilTimeout: 4000 });
+jest.mock("expo-network", () => require("./test/expo-network.mock"));

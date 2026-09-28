@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { z } from "zod";
-import { activePass, billBundle, languageByCode } from "@voya/core";
+import { activePass, markForUser, billBundle, languageByCode } from "@voya/core";
 import { BillEditor } from "@/components/split/BillEditor";
 import { claimLinkAction, deleteBillAction, saveBillAction } from "@/app/(app)/split/actions";
 import { translateAction } from "@/app/(app)/translate/actions";
@@ -38,6 +38,7 @@ export default async function BillPage({ params, searchParams }: { params: Promi
       tripLanguage={languageByCode(active.local_language)?.code ?? "en"}
       userLanguage={languageByCode(user.profile.locale)?.code ?? "en"}
       rates={rates}
+      participantMarks={Object.fromEntries(bb.participants.map((p) => [p.id, markForUser(bundle.passMarks, bundle.travelers.find((t) => t.id === p.traveler_id)?.user_id)]))}
       homeCurrency={user.profile.home_currency}
       startStep={startStep}
       saveAction={saveBillAction}

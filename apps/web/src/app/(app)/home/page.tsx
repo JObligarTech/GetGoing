@@ -6,6 +6,7 @@ import {
 } from "@voya/core";
 import { Map } from "@/components/map/Map";
 import { Clock } from "@/components/home/Clock";
+import { OfflineCard } from "@/components/home/OfflineCard";
 import { Page } from "@/components/shell/Page";
 import { TripSwitcher } from "@/components/trips/TripSwitcher";
 import { Button } from "@/components/ui/Button";
@@ -100,6 +101,7 @@ export default async function HomePage() {
       {/* Saved for today */}
       <FadeIn delay={0.05} className={`flex flex-col gap-2 px-4 pt-3.5 md:px-7 ${col} lg:overflow-y-auto`}>
         <SectionHeader title={`Saved for ${dayLabel}`} action={<Button href="/plan" variant="ghost" size="sm" className="h-auto min-h-0 px-1 text-[13px]">All {active.place_count} places</Button>} />
+        <OfflineCard tripId={active.id} />
         {scheduled.length ? (
           <Card className="divide-y divide-line">
             {scheduled.map((i) => {

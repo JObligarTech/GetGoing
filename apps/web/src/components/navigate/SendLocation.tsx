@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useId, useRef, useState } from "react";
+import { PermissionPrompt, needsPrompt } from "@/components/ui/PermissionPrompt";
 import { Send } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Chip, IconCoin } from "@/components/ui/primitives";
@@ -25,7 +26,10 @@ export function SendLocation({ travelers, senderName, tz }: { travelers: Person[
     if (!open && d.open) d.close();
   }, [open]);
 
-  const send = () => {
+  const [ask, setAsk] = useState(false);
+  // The explanation sheet comes before the browser's own prompt, once per device (mockup 7a).
+  const send = () => { if (needsPrompt("location")) setAsk(true); else locate(); };
+  const locate = () => {
     if (!("geolocation" in navigator)) { setStatus({ error: "This device can't share its location." }); return; }
     setStatus({ busy: true });
     navigator.geolocation.getCurrentPosition(
@@ -45,6 +49,7 @@ export function SendLocation({ travelers, senderName, tz }: { travelers: Person[
     );
   };
 
+  const prompt = ask ? <PermissionPrompt cap="location" onAllow={() => { setAsk(false); locate(); }} onDecline={() => setAsk(false)} /> : null;
   return (
     <>
       <button type="button" onClick={() => setOpen(true)} aria-haspopup="dialog" className="flex w-full items-center gap-3 px-3.5 py-3 text-left transition-colors duration-(--dur-fast) hover:bg-tint/60">
@@ -78,6 +83,7 @@ export function SendLocation({ travelers, senderName, tz }: { travelers: Person[
           </div>
         </div>
       </dialog>
+      {prompt}
     </>
   );
 }

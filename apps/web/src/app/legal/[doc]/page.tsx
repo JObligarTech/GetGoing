@@ -3,9 +3,18 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 /** Placeholder legal copy — replace with lawyer-reviewed text. Structure mirrors the Round 9 Legal hub. */
-const DOCS: Record<string, { title: string; sections: { h: string; p: string }[] }> = {
+const DOCS: Record<string, { title: string; updated?: string; summary?: { h: string; p: string }[]; sections: { h: string; p: string }[] }> = {
   terms: {
     title: "Terms of Service",
+    updated: "Sep 1, 2026",
+    // Short version (mockup 7a): summary cards first, the full terms take precedence.
+    summary: [
+      { h: "Your trips are yours.", p: "We store your places, notes and receipts only to sync and share with travelers you invite." },
+      { h: "Maps, translation and rates come from partners.", p: "OpenStreetMap and our rate and translation providers' terms apply; results can be wrong." },
+      { h: "Split calculates, it doesn't move money.", p: "Travelers settle outside Voya. Claim-link guests accept these terms for that bill only." },
+      { h: "Atlas Premium Pass.", p: "A single-trip pass (up to 14 days) is a one-time purchase that ends automatically. Monthly and yearly plans renew until cancelled. Gifted 3-day access and $0.99 extensions never renew. Refunds follow store policy." },
+      { h: "Permissions are optional.", p: "Location, mic, camera, photos and contacts are asked for only when needed; every feature has a fallback." },
+    ],
     sections: [
       { h: "Your content", p: "Trips, places and notes you add are yours. We store them to run Voya and never sell them." },
       { h: "Partner services", p: "Maps use OpenStreetMap data. Translation, rates and receipts may use third-party providers listed in Licences & credits." },
@@ -65,8 +74,18 @@ export default async function LegalDoc({ params }: { params: Promise<{ doc: stri
           <Link key={k} href={`/legal/${k}`} aria-current={k === doc ? "page" : undefined} className={k === doc ? "rounded-pill bg-tint px-3 py-1.5 text-primary" : "rounded-pill px-3 py-1.5 text-muted hover:bg-tint"}>{v.title}</Link>
         ))}
       </nav>
+      {d.updated && <p className="text-[12px] font-bold uppercase tracking-wide text-muted">Updated {d.updated}</p>}
       <h1 className="text-[30px] font-extrabold tracking-[-0.02em]">{d.title}</h1>
       <p className="text-[13px] text-muted">Placeholder wording — have a lawyer review before launch.</p>
+      {d.summary && (
+        <section aria-labelledby="short-version" className="flex flex-col gap-2">
+          <h2 id="short-version" className="text-[13px] font-bold text-muted">Short version. The full terms take precedence.</h2>
+          <ul className="grid gap-2 sm:grid-cols-2">
+            {d.summary.map((s) => <li key={s.h} className="card p-4"><p className="text-[15px] font-bold">{s.h}</p><p className="mt-1 text-[13px] leading-relaxed text-muted">{s.p}</p></li>)}
+          </ul>
+          <p className="text-[12px] text-muted">Full terms · {d.sections.length} sections</p>
+        </section>
+      )}
       <div className="card divide-y divide-line">
         {d.sections.map((s) => (
           <section key={s.h} className="px-4 py-4">

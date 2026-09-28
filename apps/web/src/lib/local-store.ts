@@ -41,3 +41,12 @@ function subscribeOnline(cb: () => void) {
 export function useOnline(): boolean {
   return useSyncExternalStore(subscribeOnline, () => navigator.onLine, () => true);
 }
+
+/** A ticking clock for "saved 41 min ago" copy, read through useSyncExternalStore so render stays pure. */
+export function useNow(intervalMs = 30_000): number {
+  return useSyncExternalStore(
+    (cb) => { const id = setInterval(cb, intervalMs); return () => clearInterval(id); },
+    () => Math.floor(Date.now() / intervalMs) * intervalMs,
+    () => 0,
+  );
+}

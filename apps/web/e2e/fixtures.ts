@@ -9,9 +9,11 @@ async function blockTiles(page: Page) {
   await page.route(/tile\.openstreetmap\.org/, (r) => r.fulfill({ status: 200, contentType: "image/png", body: BLANK_TILE }));
 }
 
-export async function login(page: Page) {
+export const CHRIS = { email: "chris@example.com", password: "VoyaDemo-2027!" };
+
+export async function login(page: Page, email = DEMO.email) {
   await page.goto("/login?fresh=1");
-  await page.getByLabel("Email").fill(DEMO.email);
+  await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill(DEMO.password);
   await page.getByRole("button", { name: "Log in" }).click();
   await expect(page).toHaveURL(/\/home$/);

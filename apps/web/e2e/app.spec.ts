@@ -110,6 +110,7 @@ test.describe("core flows (signed in)", () => {
   test("profile: theme toggle, legal links, data export, delete dialog", async ({ authed: page }) => {
     await page.goto("/profile");
     await expectAccessible(page);
+    await page.getByRole("link", { name: "Settings" }).click(); // round 6: theme lives in Settings
     const theme = page.getByRole("radiogroup", { name: "Theme" });
     await theme.getByRole("radio", { name: "Dark" }).click();
     await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
@@ -118,6 +119,7 @@ test.describe("core flows (signed in)", () => {
     await theme.getByRole("radio", { name: "Follow system" }).click();
     await expect(page.locator("html")).not.toHaveAttribute("data-theme", /.+/);
 
+    await page.getByRole("link", { name: "Permissions & legal" }).click(); // round 6: legal and your data live under Permissions
     const dl = page.waitForEvent("download");
     await page.getByRole("link", { name: "Download my data" }).click();
     expect((await dl).suggestedFilename()).toMatch(/^voya-export-\d{4}-\d{2}-\d{2}\.json$/);

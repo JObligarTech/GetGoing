@@ -237,3 +237,26 @@ export const profileSchema = z.object({
   theme: z.enum(["system", "light", "dark"]),
   marketingOptIn: z.boolean(),
 });
+
+// ─── Round 6: profile defaults, settings, Atlas Premium Pass ─────────────────
+export const settingsSchema = z.object({
+  suggestLocalLanguage: z.boolean(),
+  suggestLocalCurrency: z.boolean(),
+  showHomeTime: z.boolean(),
+  quickAction: z.boolean(),
+}).partial();
+export const profileDefaultsSchema = z.object({
+  homeCurrency: iso3,
+  homeTz: z.string().min(1).max(64),
+  languages: z.array(langCode).min(1).max(8),
+  units: z.enum(["km", "mi"]),
+});
+export type ProfileDefaultsInput = z.infer<typeof profileDefaultsSchema>;
+export const passPlanSchema = z.enum(["trip", "monthly", "yearly"]);
+export const paymentMethodSchema = z.enum(["card", "apple_pay", "google_pay"]);
+export const purchaseSchema = z.object({ plan: passPlanSchema, tripId: z.uuid().nullable(), method: paymentMethodSchema });
+export type PurchaseInput = z.infer<typeof purchaseSchema>;
+export const extendSchema = z.object({ tripId: z.uuid(), days: z.number().int().min(1).max(7), method: paymentMethodSchema });
+export type ExtendInput = z.infer<typeof extendSchema>;
+export const giftCodeSchema = z.string().trim().toLowerCase().regex(/^[a-f0-9]{24}$/, "That doesn't look like a gift code");
+export const createGiftSchema = z.object({ tripId: z.uuid(), travelerId: shortId });

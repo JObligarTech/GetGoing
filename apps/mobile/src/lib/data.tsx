@@ -1,9 +1,11 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import {
-  DEMO_NOW, billSchema, demoBundle, demoEntitlements, demoPastBills, demoTrips, listBills, listEntitlements, listTrips, loadTripBundle, nextTravelerColor, phraseSchema, pickActiveTrip, routeSchema,
+  DEMO_NOW, activePass, billSchema, canGift, demoAllEntitlements, demoBundle, demoPastBills, demoTrips, extensionEndsAt, giftCandidates, giftEndsAt, listBills, listEntitlements, listTrips, loadTripBundle, nextTravelerColor, passWindow, phraseSchema, pickActiveTrip, routeSchema,
   travelerSchema, treeSchema, tripCurrencySchema,
-  type BillInput, type BillListItem, type EntitlementRow, type Phrase, type PhraseInput, type RouteInput, type RouteTree, type TravelerInput, type TravelerRow, type TripBundle, type TripCurrencyRow, type TripListItem,
+  type BillInput, type BillListItem, type EntitlementRow, type PassGiftRow, type PassMarkRow, type PassPlanId, type PaymentMethod, type Phrase, type PhraseInput, type PurchaseReceipt, type RouteInput, type RouteTree, type TravelerInput, type TravelerRow, type TripBundle, type TripCurrencyRow, type TripListItem,
 } from "@voya/core";
+import { billing } from "./billing";
+import { savedAtStore } from "./offline";
 import { getSupabase, isDemo, prefs } from "./supabase";
 import { useSession } from "./session";
 
@@ -35,8 +37,17 @@ interface DataState {
   saveBill(input: Omit<BillInput, "tripId">): Promise<{ id: string } | { error: string }>;
   deleteBill(id: string): Promise<{ ok: true } | { error: string }>;
   claimLink(billId: string, participantId: string): Promise<{ url: string } | { error: string }>;
+  /** Atlas Premium Pass: buy, extend a gift, gift a traveler, preview and redeem a gift code. */
+  purchase(plan: PassPlanId, method: PaymentMethod): Promise<{ id: string } | { error: string }>;
+  extend(days: number, method: PaymentMethod): Promise<{ id: string } | { error: string }>;
+  createGift(travelerId: string): Promise<{ url: string; code: string } | { error: string }>;
+  giftPreview(code: string): Promise<GiftPreview | null>;
+  redeemGift(code: string): Promise<{ id: string } | { error: string }>;
   refresh(): Promise<void>;
 }
+export interface GiftPreview { trip_name: string; trip_tz: string | null; days: number; status: string; giver_name: string; traveler_name: string; expired: boolean; ends_preview: string }
+const hex = (bytes: number) => Array.from({ length: bytes }, () => Math.floor(Math.random() * 256).toString(16).padStart(2, "0")).join("");
+const isActiveAt = (e: Pick<EntitlementRow, "starts_at" | "ends_at" | "trip_id">, tripId: string, at: Date) => new Date(e.starts_at).getTime() <= at.getTime() && new Date(e.ends_at).getTime() > at.getTime() && (e.trip_id == null || e.trip_id === tripId);
 
 const Ctx = createContext<DataState | null>(null);
 /** Demo data is plain JSON; a JSON round-trip is a dependable deep clone on every RN/Jest runtime. */
@@ -49,7 +60,11 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [bundle, setBundle] = useState<TripBundle | null>(null);
   const [loading, setLoading] = useState(true);
-  const [demo] = useState(() => ({ trips: clone(demoTrips), bundles: new Map([[demoBundle.trip.id, clone(demoBundle)]]), entitlements: clone(demoEntitlements) }));
+  const [demo] = useState(() => {
+    const entitlements = new Map<string, EntitlementRow[]>();
+    for (const e of demoAllEntitlements) entitlements.set(e.user_id, [...(entitlements.get(e.user_id) ?? []), clone(e)]);
+    return { trips: clone(demoTrips), bundles: new Map([[demoBundle.trip.id, clone(demoBundle)]]), entitlements };
+  });
   const [entitlements, setEntitlements] = useState<EntitlementRow[]>([]);
   const [pastBills, setPastBills] = useState<BillListItem[]>([]);
   const now = useMemo(() => (isDemo ? DEMO_NOW : new Date()), []);
@@ -61,15 +76,26 @@ export function DataProvider({ children }: { children: ReactNode }) {
     const list = isDemo ? [...demo.trips] : await listTrips(await getSupabase());
     const saved = await prefs.get("activeTrip");
     const chosen = list.find((t) => t.id === saved) ?? pickActiveTrip(list, now, user.profile.home_tz);
-    const demoBundleFor = (id: string) => { const x = demo.bundles.get(id); return x ? { ...x } : null; };
+    // Mirrors trip_pass_marks: each member's longest active pass, plus gifts accepted on the trip.
+    const marksFor = (b: TripBundle): PassMarkRow[] => b.travelers.flatMap((t) => {
+      if (!t.user_id) return [];
+      const own = (demo.entitlements.get(t.user_id) ?? []).filter((e) => isActiveAt(e, b.trip.id, now));
+      const gifted = b.passGifts.filter((g) => g.status === "accepted" && g.recipient_id === t.user_id && g.ends_at && new Date(g.ends_at).getTime() > now.getTime()).map((g) => ({ kind: "gift" as const, ends_at: g.ends_at! }));
+      const best = [...own, ...gifted].sort((x, y) => new Date(y.ends_at).getTime() - new Date(x.ends_at).getTime())[0];
+      return best ? [{ user_id: t.user_id, kind: best.kind }] : [];
+    });
+    const demoBundleFor = (id: string) => { const x = demo.bundles.get(id); return x ? { ...x, passMarks: marksFor(x) } : null; };
     const b = chosen ? (isDemo ? demoBundleFor(chosen.id) : await loadTripBundle(await getSupabase(), chosen.id)) : null;
-    const ents = isDemo ? demo.entitlements : await listEntitlements(await getSupabase());
+    const ents = isDemo ? [...(demo.entitlements.get(user.id) ?? [])] : await listEntitlements(await getSupabase());
     const past = isDemo
       ? [...[...demo.bundles.values()].flatMap((x) => x.bills.map((bill) => ({ ...bill, trip_name: x.trip.name, people: x.billParticipants.filter((p) => p.bill_id === bill.id).length }))), ...demoPastBills]
       : await listBills(await getSupabase());
     return { trips: list, activeId: chosen?.id ?? null, bundle: b, entitlements: ents, pastBills: past };
   }, [user, demo, now]);
-  const apply = useCallback((r: Awaited<ReturnType<typeof load>>) => { setTrips(r.trips); setActiveId(r.activeId); setBundle(r.bundle); setEntitlements(r.entitlements); setPastBills(r.pastBills); setLoading(false); }, []);
+  const apply = useCallback((r: Awaited<ReturnType<typeof load>>) => {
+    setTrips(r.trips); setActiveId(r.activeId); setBundle(r.bundle); setEntitlements(r.entitlements); setPastBills(r.pastBills); setLoading(false);
+    if (r.activeId) void savedAtStore.set({ tripId: r.activeId, savedAt: new Date().toISOString() }); // what the offline banner reports (mockup 6b)
+  }, []);
   const refresh = useCallback(async () => apply(await load()), [load, apply]);
 
   useEffect(() => {
@@ -366,7 +392,117 @@ export function DataProvider({ children }: { children: ReactNode }) {
   }, [bundle, demo, refresh]);
 
   const active = trips.find((t) => t.id === activeId) ?? null;
-  const value = useMemo<DataState>(() => ({ now, trips, active, bundle, loading, entitlements, pastBills, setActive, assignPlaceToSlot, saveRoute, saveTree, addPhrase, removePhrase, addCurrency, removeCurrency, addTraveler, updateTraveler, removeTraveler, createInvite, saveBill, deleteBill, claimLink, refresh }), [now, trips, active, bundle, loading, entitlements, pastBills, setActive, assignPlaceToSlot, saveRoute, saveTree, addPhrase, removePhrase, addCurrency, removeCurrency, addTraveler, updateTraveler, removeTraveler, createInvite, saveBill, deleteBill, claimLink, refresh]);
+
+  // ─── Atlas Premium Pass ───────────────────────────────────────────────────
+  /** Demo only: a mock receipt becomes an entitlement in memory (mirrors grant_pass / grant_extension). Real builds rely on the billing webhook. */
+  const grantDemo = useCallback((receipt: PurchaseReceipt, trip: TripListItem | null, tz: string): EntitlementRow => {
+    const mine = demo.entitlements.get(receipt.userId) ?? [];
+    const base = { id: crypto.randomUUID(), user_id: receipt.userId, source: "mock", created_at: receipt.paidAt, plan_ref: receipt.receiptId, paid_with: receipt.paidWith, amount: receipt.amount, currency: receipt.currency };
+    let row: EntitlementRow;
+    if (receipt.plan === "extension") {
+      const gift = mine.filter((e) => e.trip_id === receipt.tripId && (e.kind === "gift" || e.kind === "extension")).sort((a, b) => b.ends_at.localeCompare(a.ends_at))[0];
+      if (!gift) throw new Error("no gifted pass to extend");
+      const from = new Date(Math.max(new Date(gift.ends_at).getTime(), now.getTime()));
+      row = { ...base, kind: "extension", trip_id: receipt.tripId, starts_at: new Date(Math.min(new Date(gift.ends_at).getTime(), now.getTime())).toISOString(), ends_at: extensionEndsAt(from, tz, receipt.days ?? 1).toISOString(), gifted_by: gift.gifted_by, gift_id: gift.gift_id };
+    } else {
+      const w = passWindow(receipt.plan, now, trip, tz);
+      row = { ...base, kind: receipt.plan, trip_id: receipt.plan === "trip" ? receipt.tripId : null, starts_at: w.startsAt.toISOString(), ends_at: w.endsAt.toISOString(), gifted_by: null, gift_id: null };
+    }
+    demo.entitlements.set(receipt.userId, [...mine, row]);
+    return row;
+  }, [demo, now]);
+
+  const purchase = useCallback<DataState["purchase"]>(async (plan, method) => {
+    if (!user) return { error: "Not signed in." };
+    if (plan === "trip" && !active) return { error: "A single-trip pass needs a trip." };
+    if (activePass(entitlements, active?.id ?? null, now)) return { error: "You already have Atlas Premium Pass." };
+    const r = await billing.purchase({ plan, userId: user.id, tripId: plan === "trip" ? active!.id : null, method });
+    if (r.status !== "paid") return { error: r.status === "unavailable" ? r.message : "Continue the purchase in your store." };
+    if (!isDemo) return { error: "Payment received. Your pass appears once the store confirms it." };
+    const row = grantDemo(r.receipt, active, active?.local_tz ?? user.profile.home_tz);
+    await refresh();
+    return { id: row.id };
+  }, [user, active, entitlements, now, grantDemo, refresh]);
+
+  const extend = useCallback<DataState["extend"]>(async (days, method) => {
+    if (!user || !active) return { error: "No active trip." };
+    if (!entitlements.some((e) => e.trip_id === active.id && (e.kind === "gift" || e.kind === "extension"))) return { error: "Extensions are for gifted passes. Get a single-trip pass instead." };
+    const r = await billing.purchase({ plan: "extension", userId: user.id, tripId: active.id, days, method });
+    if (r.status !== "paid") return { error: r.status === "unavailable" ? r.message : "Continue the purchase in your store." };
+    if (!isDemo) return { error: "Payment received. Your extension appears once the store confirms it." };
+    const row = grantDemo(r.receipt, active, active.local_tz ?? user.profile.home_tz);
+    await refresh();
+    return { id: row.id };
+  }, [user, active, entitlements, grantDemo, refresh]);
+
+  const createGift = useCallback<DataState["createGift"]>(async (travelerId) => {
+    if (!user || !bundle) return { error: "No active trip." };
+    const allowed = canGift(entitlements, bundle.trip.id, bundle.passGifts, user.id, now);
+    if (!allowed.ok) return { error: allowed.reason };
+    const c = giftCandidates(bundle.travelers, bundle.passMarks, user.id).find((x) => x.traveler.id === travelerId);
+    if (!c) return { error: "That traveler isn't on this trip." };
+    if (!c.eligible) return { error: `${c.traveler.name} already has a pass.` };
+    const site = process.env.EXPO_PUBLIC_SITE_URL ?? "https://voya.app";
+    let code: string | null;
+    if (isDemo) {
+      const b = demo.bundles.get(bundle.trip.id)!;
+      const row: PassGiftRow = { id: crypto.randomUUID(), trip_id: bundle.trip.id, giver_id: user.id, traveler_id: travelerId, recipient_id: null, code: hex(12), status: "sent", days: 3, created_at: now.toISOString(), expires_at: new Date(now.getTime() + 30 * 86_400_000).toISOString(), accepted_at: null, ends_at: null };
+      b.passGifts = [...b.passGifts, row];
+      code = row.code;
+    } else {
+      const { data, error } = await (await getSupabase()).rpc("create_pass_gift", { p_trip_id: bundle.trip.id, p_traveler_id: travelerId });
+      code = error ? null : ((data as { code?: string } | null)?.code ?? null);
+    }
+    if (!code) return { error: "Couldn't create the gift." };
+    await refresh();
+    return { url: `${site}/gift/${code}`, code };
+  }, [user, bundle, entitlements, now, demo, refresh]);
+
+  const giftPreview = useCallback<DataState["giftPreview"]>(async (code) => {
+    if (isDemo) {
+      for (const b of demo.bundles.values()) {
+        const g = b.passGifts.find((x) => x.code === code);
+        if (!g) continue;
+        return { trip_name: b.trip.name, trip_tz: b.trip.local_tz, days: g.days, status: g.status, giver_name: "Joe", traveler_name: b.travelers.find((t) => t.id === g.traveler_id)?.name ?? "you", expired: new Date(g.expires_at).getTime() <= now.getTime(), ends_preview: giftEndsAt(now, b.trip.local_tz ?? "UTC", g.days).toISOString() };
+      }
+      return null;
+    }
+    const { data, error } = await (await getSupabase()).rpc("gift_preview", { p_code: code });
+    return error || !data ? null : (data as unknown as GiftPreview);
+  }, [demo, now]);
+
+  const redeemGift = useCallback<DataState["redeemGift"]>(async (code) => {
+    if (!user) return { error: "Not signed in." };
+    let id: string | null = null;
+    if (isDemo) {
+      for (const b of demo.bundles.values()) {
+        const g = b.passGifts.find((x) => x.code === code);
+        if (!g) continue;
+        if (g.status !== "sent" || new Date(g.expires_at).getTime() <= now.getTime()) return { error: "This gift is no longer available." };
+        if (g.giver_id === user.id) return { error: "You can't redeem your own gift." };
+        const tr = b.travelers.find((t) => t.id === g.traveler_id);
+        if (tr?.user_id && tr.user_id !== user.id) return { error: "This gift is for someone else." };
+        if ((demo.entitlements.get(user.id) ?? []).some((e) => isActiveAt(e, b.trip.id, now))) return { error: "You already have a pass for this trip." };
+        if (tr && !tr.user_id) tr.user_id = user.id;
+        const ends = giftEndsAt(now, b.trip.local_tz ?? "UTC", g.days);
+        const row: EntitlementRow = { id: crypto.randomUUID(), user_id: user.id, kind: "gift", trip_id: b.trip.id, starts_at: now.toISOString(), ends_at: ends.toISOString(), gifted_by: g.giver_id, source: "gift", created_at: now.toISOString(), gift_id: g.id, plan_ref: null, paid_with: null, amount: null, currency: null };
+        demo.entitlements.set(user.id, [...(demo.entitlements.get(user.id) ?? []), row]);
+        Object.assign(g, { status: "accepted", recipient_id: user.id, accepted_at: now.toISOString(), ends_at: ends.toISOString() });
+        id = row.id;
+        break;
+      }
+      if (!id) return { error: "Gift not found." };
+    } else {
+      const { data, error } = await (await getSupabase()).rpc("redeem_gift", { p_code: code });
+      if (error) return { error: error.code === "42501" ? "This gift is for someone else." : "This gift is no longer available." };
+      id = (data as { entitlement_id?: string } | null)?.entitlement_id ?? null;
+      if (!id) return { error: "Couldn't redeem the gift." };
+    }
+    await refresh();
+    return { id };
+  }, [user, demo, now, refresh]);
+
+  const value = useMemo<DataState>(() => ({ now, trips, active, bundle, loading, entitlements, pastBills, setActive, assignPlaceToSlot, saveRoute, saveTree, addPhrase, removePhrase, addCurrency, removeCurrency, addTraveler, updateTraveler, removeTraveler, createInvite, saveBill, deleteBill, claimLink, purchase, extend, createGift, giftPreview, redeemGift, refresh }), [now, trips, active, bundle, loading, entitlements, pastBills, setActive, assignPlaceToSlot, saveRoute, saveTree, addPhrase, removePhrase, addCurrency, removeCurrency, addTraveler, updateTraveler, removeTraveler, createInvite, saveBill, deleteBill, claimLink, purchase, extend, createGift, giftPreview, redeemGift, refresh]);
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 

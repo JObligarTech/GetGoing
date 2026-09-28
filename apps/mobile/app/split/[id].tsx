@@ -5,8 +5,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import {
   activePass, billBundle, billShareText, billTotal, computeBill, convert, formatMoney, fractionLabel, initial, languageByCode, splitRestEvenly, toggleShare,
-  type BillInput, type BillItemRow, type BillParticipantRow, type BillShareRow,
-} from "@voya/core";
+  type BillInput, type BillItemRow, type BillParticipantRow, type BillShareRow, markForUser } from "@voya/core";
 import { Button, Card, Chip, EmptyState, announce, screenStyles } from "@/components/ui";
 import { useData } from "@/lib/data";
 import { fx, translation } from "@/lib/providers";
@@ -104,7 +103,9 @@ export default function BillScreen() {
     const text = billShareText(bill, comp, rates[homeCurrency] ? { home: { currency: homeCurrency, rate: rates[homeCurrency]! } } : {});
     try { await Share.share({ message: text }); } catch { /* cancelled */ }
   };
-  const avatar = (p: BillParticipantRow, size = 32, on = true) => <View style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: on ? p.color : t.surface, borderWidth: on ? 0 : 2, borderColor: t.borderStrong, alignItems: "center", justifyContent: "center" }}><Text style={{ color: on ? "#fff" : t.textMuted, fontSize: Math.round(size * 0.38), fontFamily: t.font.bold }}>{initial(p.name)}</Text></View>;
+  // Holders get the amber ring (mockup 8a); gifted access shows the ring too, without the badge.
+  const markOf = (p: BillParticipantRow) => markForUser(bundle.passMarks, bundle.travelers.find((x) => x.id === p.traveler_id)?.user_id);
+  const avatar = (p: BillParticipantRow, size = 32, on = true) => { const mark = on ? markOf(p) : null; return <View style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: on ? p.color : t.surface, borderWidth: on ? (mark ? 2 : 0) : 2, borderColor: mark ? t.premium : t.borderStrong, alignItems: "center", justifyContent: "center" }}><Text style={{ color: on ? "#fff" : t.textMuted, fontSize: Math.round(size * 0.38), fontFamily: t.font.bold }}>{initial(p.name)}</Text></View>; };
 
   return (
     <View style={s.screen}>

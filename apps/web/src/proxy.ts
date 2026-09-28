@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createProxyClient } from "@/lib/supabase/proxy";
 import { DEMO_COOKIE, isDemo, publicEnv } from "@/lib/env";
 
-const PUBLIC_PATHS = ["/welcome", "/login", "/signup", "/reset", "/welcome-back", "/auth", "/legal", "/api/health", "/s", "/join"];
+const PUBLIC_PATHS = ["/welcome", "/login", "/signup", "/reset", "/welcome-back", "/auth", "/legal", "/api/health", "/s", "/join", "/gift"];
 const isPublic = (p: string) => p === "/" || PUBLIC_PATHS.some((x) => p === x || p.startsWith(`${x}/`));
 
 function buildCsp(nonce: string): string {
@@ -39,7 +39,8 @@ export async function proxy(request: NextRequest) {
 
   let signedIn = false;
   if (isDemo) {
-    signedIn = request.cookies.get(DEMO_COOKIE)?.value === "1";
+    const v = request.cookies.get(DEMO_COOKIE)?.value ?? "";
+    signedIn = v === "1" || /^[0-9a-f-]{36}$/.test(v);
   } else {
     const { supabase, getResponse } = createProxyClient(request, response);
     // Refreshes the session cookie if needed; getUser() validates the JWT server-side.

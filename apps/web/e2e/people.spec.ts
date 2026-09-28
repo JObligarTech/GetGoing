@@ -10,7 +10,7 @@ test.describe("People (round 5)", () => {
     await expect(page.getByRole("heading", { level: 1, name: "People · 4" })).toBeVisible();
     await expect(page.getByText("You · Organizer · All 14 nights · Home USD")).toBeVisible();
     await expect(page.getByText("Guest · Tokyo only, Mar 15–20 · Home CAD")).toBeVisible();
-    await expect(page.getByText("Guest · All 14 nights · +1 415 555 0142")).toBeVisible();
+    await expect(page.getByText("Voya account · All 14 nights · +1 415 555 0142")).toBeVisible();
     // Groups come from the tree route.
     await expect(page.getByText(/Used in .Shibuya afternoon. route/)).toHaveCount(2);
     await expect(page.getByRole("img", { name: "Joe, Sarah" })).toBeVisible();

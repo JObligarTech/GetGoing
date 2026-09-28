@@ -26,7 +26,7 @@ export type TripListItem = Awaited<ReturnType<typeof listTrips>>[number];
 
 /** Everything the Home/Plan screens need for one trip, in one round-trip each. */
 export async function loadTripBundle(db: VoyaClient, tripId: string): Promise<TripBundle | null> {
-  const [trip, travelers, categories, places, placeCats, stays, items, routes, routeStops, branches, branchTravelers, phrases, currencies, invites, bills, billItems, billParticipants, billShares] = await Promise.all([
+  const [trip, travelers, categories, places, placeCats, stays, items, routes, routeStops, branches, branchTravelers, phrases, currencies, invites, bills, billItems, billParticipants, billShares, passGifts, passMarks] = await Promise.all([
     db.from("trips").select("*").eq("id", tripId).maybeSingle(),
     db.from("travelers").select("*").eq("trip_id", tripId).order("created_at"),
     db.from("categories").select("*").eq("trip_id", tripId).order("sort_order"),
@@ -45,8 +45,10 @@ export async function loadTripBundle(db: VoyaClient, tripId: string): Promise<Tr
     db.from("bill_items").select("*").eq("trip_id", tripId).order("sort_order"),
     db.from("bill_participants").select("*").eq("trip_id", tripId).order("created_at"),
     db.from("bill_shares").select("*").eq("trip_id", tripId),
+    db.from("pass_gifts").select("*").eq("trip_id", tripId).order("created_at"),
+    db.rpc("trip_pass_marks", { p_trip_id: tripId }),
   ]);
-  for (const r of [trip, travelers, categories, places, placeCats, stays, items, routes, routeStops, branches, branchTravelers, phrases, currencies, invites, bills, billItems, billParticipants, billShares]) if (r.error) throw r.error;
+  for (const r of [trip, travelers, categories, places, placeCats, stays, items, routes, routeStops, branches, branchTravelers, phrases, currencies, invites, bills, billItems, billParticipants, billShares, passGifts, passMarks]) if (r.error) throw r.error;
   if (!trip.data) return null;
   return {
     trip: trip.data,
@@ -67,6 +69,8 @@ export async function loadTripBundle(db: VoyaClient, tripId: string): Promise<Tr
     billItems: billItems.data ?? [],
     billParticipants: billParticipants.data ?? [],
     billShares: billShares.data ?? [],
+    passGifts: passGifts.data ?? [],
+    passMarks: passMarks.data ?? [],
   };
 }
 
@@ -90,4 +94,10 @@ export async function getProfile(db: VoyaClient, userId: string) {
   const { data, error } = await db.from("profiles").select("*").eq("id", userId).maybeSingle();
   if (error) throw error;
   return data;
+}
+
+/** Trip defaults live on the profile; RLS limits the update to the caller's own row. */
+export async function updateProfile(db: VoyaClient, userId: string, patch: Partial<Pick<import("./database.types").ProfileRow, "display_name" | "home_currency" | "home_tz" | "theme" | "units" | "languages" | "settings" | "locale">>) {
+  const { error } = await db.from("profiles").update({ ...patch, updated_at: new Date().toISOString() }).eq("id", userId);
+  if (error) throw error;
 }

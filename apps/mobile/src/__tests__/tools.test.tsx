@@ -87,7 +87,8 @@ describe("Translate", () => {
     expect(mockRouter.push).toHaveBeenCalledWith({ pathname: "/translate/driver", params: { place: HOTEL } });
     // The mic is honest about Expo Go.
     await fireEvent.press(screen.getByRole("button", { name: "Speak in Japanese" }));
-    expect(screen.getByRole("alert")).toHaveTextContent(/Voice input needs a speech-recognition module/);
+    await fireEvent.press(await screen.findByRole("button", { name: "Allow microphone" })); // round 6: the mic sheet explains first, once per device
+    expect(await screen.findByRole("alert")).toHaveTextContent(/Voice input needs a speech-recognition module/);
   });
 
   it("flags text outside the offline phrasebook instead of inventing a translation", async () => {

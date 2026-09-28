@@ -42,7 +42,7 @@ const OPTIONS: { value: Pref; label: string; Icon: typeof Sun }[] = [
 ];
 
 /** Radio-group styled segmented control. Announces as "Theme, Light, selected". */
-export function ThemeToggle({ className }: { className?: string }) {
+export function ThemeToggle({ className, labels, onChange }: { className?: string; labels?: boolean; onChange?: (p: Pref) => void }) {
   const [pref, setPref] = useThemePref();
   return (
     <div role="radiogroup" aria-label="Theme" className={cx("inline-flex gap-1 rounded-lg border border-line-strong bg-surface p-1", className)}>
@@ -55,13 +55,14 @@ export function ThemeToggle({ className }: { className?: string }) {
             role="radio"
             aria-checked={active}
             aria-label={label}
-            onClick={() => setPref(value)}
+            onClick={() => { setPref(value); onChange?.(value); }}
             className={cx(
-              "flex h-8 min-w-9 items-center justify-center rounded-md px-2 text-[13px] font-bold transition-colors duration-(--dur-fast)",
+              "flex h-8 min-w-9 items-center justify-center gap-1.5 rounded-md px-2 text-[13px] font-bold transition-colors duration-(--dur-fast)",
               active ? "bg-primary text-on-primary" : "text-muted hover:bg-tint",
             )}
           >
             <Icon aria-hidden="true" size={16} />
+            {labels && <span>{value === "system" ? "Auto" : label}</span>}
           </button>
         );
       })}

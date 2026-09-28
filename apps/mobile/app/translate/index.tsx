@@ -9,6 +9,8 @@ import { LanguageBar, ResultCard } from "@/components/translate";
 import { Button, Card, Chip, EmptyState, Eyebrow, IconCoin, ListRow, PageHeader, announce, screenStyles } from "@/components/ui";
 import { useData } from "@/lib/data";
 import { translation } from "@/lib/providers";
+import { PermissionSheet } from "@/components/PermissionSheet";
+import { markPrompt, needsPrompt, useOnline } from "@/lib/offline";
 import { useSession } from "@/lib/session";
 import { useTheme } from "@/lib/theme";
 
@@ -39,6 +41,8 @@ export default function TranslateScreen() {
   const [result, setResult] = useState<Result | null>(null);
   const [status, setStatus] = useState<{ ok?: string; error?: string }>({});
   const [busy, setBusy] = useState(false);
+  const [askMic, setAskMic] = useState(false);
+  const online = useOnline();
 
   const run = async (input: string, f: Language, tt: Language) => {
     const parsed = translateSchema.safeParse({ text: input, from: f.code, to: tt.code });
@@ -95,13 +99,23 @@ export default function TranslateScreen() {
     if ("error" in r) { setStatus({ error: r.error }); return; }
     const ok = `Removed "${p.source_text}".`; setStatus({ ok }); announce(ok);
   };
-  const mic = () => { const m = "Voice input needs a speech-recognition module in a development build. Type instead, or use Conversation with the other person typing."; setStatus({ error: m }); announce(m); };
+  const micUnavailable = () => { const m = "Voice input needs a speech-recognition module in a development build. Type instead, or use Conversation with the other person typing."; setStatus({ error: m }); announce(m); };
+  const mic = () => { if (!online) { const m = "Speech needs internet. Type instead, or show the phrase."; setStatus({ error: m }); announce(m); return; } if (needsPrompt("microphone")) setAskMic(true); else micUnavailable(); };
   const enter = (i: number) => (reduce ? undefined : FadeInDown.duration(220).delay(i * 40));
 
   return (
     <View style={s.screen}>
       <ScrollView contentContainerStyle={[s.content, { paddingTop: insets.top + 8, paddingBottom: 120 }]} keyboardShouldPersistTaps="handled">
-        <Animated.View entering={enter(0)}><PageHeader eyebrow={active.name} title="Translate" action={<Chip>{to.native} ready</Chip>} /></Animated.View>
+        <Animated.View entering={enter(0)}><PageHeader eyebrow={active.name} title="Translate" action={online ? <Chip>{to.native} ready</Chip> : <Chip tone="plain">Offline</Chip>} /></Animated.View>
+        <PermissionSheet cap="microphone" context={to.name} visible={askMic} onAllow={() => { markPrompt("microphone", true); setAskMic(false); micUnavailable(); }} onDecline={() => { markPrompt("microphone", false); setAskMic(false); }} />
+        {!online && (
+          <Card accessibilityLabel="Unavailable right now">
+            <Text style={{ paddingHorizontal: 14, paddingTop: 10, fontSize: 12, fontFamily: t.font.bold, color: t.textMuted, textTransform: "uppercase", letterSpacing: 0.6 }}>Unavailable right now · text translation works offline</Text>
+            <ListRow title="Voice & Conversation" subtitle="Type instead, or show the phrase" />
+            <ListRow title="Camera translation" subtitle="Photos are saved and translated when you're back online" />
+            <ListRow title="Split receipt scan" subtitle="Snap now, split later" last />
+          </Card>
+        )}
         <Animated.View entering={enter(1)}><LanguageBar from={from} to={to} reason={reason} onChange={changeLang} onSwap={swap} /></Animated.View>
 
         <Animated.View entering={enter(2)}>

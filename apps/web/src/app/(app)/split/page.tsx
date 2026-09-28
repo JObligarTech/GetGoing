@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Camera, PenLine, Receipt } from "lucide-react";
-import { activePass, formatDateRange, formatMoney, localDate, navShortcuts, passLabel, pluralize, tripDayNumber } from "@voya/core";
+import { activePass, endedPass, formatDateRange, formatMoney, localDate, navShortcuts, passLabel, pluralize, tripDayNumber } from "@voya/core";
 import { PassGate } from "@/components/split/PassGate";
 import { Page } from "@/components/shell/Page";
 import { Button } from "@/components/ui/Button";
@@ -27,6 +27,12 @@ export default async function SplitPage() {
       <Page>
         <FadeIn className="flex flex-col gap-3.5">
           <PageHeader eyebrow={`${active.name} · Tools`} title="Split" action={<Chip tone="premium">Atlas</Chip>} />
+          {endedPass(await getEntitlements(), active.id, at) && (
+            <div role="status" className="card flex items-center gap-3 p-4">
+              <div className="min-w-0 flex-1"><p className="text-[15px] font-semibold">Atlas Premium Pass ended</p><p className="text-[12px] text-muted">Your bills stay readable and shareable.</p></div>
+              <Button href="/pass" size="sm">Upgrade</Button>
+            </div>
+          )}
           <PassGate localCurrency={active.local_currency} homeCurrency={user.profile.home_currency} />
           {past.length > 0 && (
             <>

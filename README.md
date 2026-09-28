@@ -12,7 +12,7 @@ This repo implements the [Claude Design](https://claude.ai/design) handoff (gree
 | `packages/tokens` | Design tokens (light + dark) with WCAG-AA contrast tests; generates the CSS variables and the native theme |
 | `supabase` | Postgres schema, row-level security, account deletion / data export RPCs, seed, RLS tests |
 
-## Status — build round 5 (People + Split)
+## Status — build round 6 (Atlas Premium Pass, Profile & Settings, offline)
 
 **Round 1 (foundation + core flows), done and verified:** design tokens · Supabase schema + RLS · auth (welcome, log in, create account with 16+ gate and unticked marketing consent, welcome back, reset) · Home (live map, countdown, local/home clocks, stay card, today's places, trip switcher) · Trips (list, overview, create) · Plan (day timeline, open-slot suggestions, map view) · saved place / stay details ("Take me back to my hotel", address in 日本語) · profile (theme, legal, data export, account deletion).
 
@@ -46,9 +46,19 @@ This repo implements the [Claude Design](https://claude.ai/design) handoff (gree
 - **Split** (mockups 5a/5b/5c/8b), part of Atlas Premium Pass — the locked state with the three tiers and the gift path; **scan** with the merchant (tonight's dinner), currency and people prefilled from the trip, several pages, "Enter by hand"; **check items** with OCR correction (quantities, prices, a flagged low-confidence line, "read as つけ麹"), Translate, tax / service / discount, and the manual "Add item by hand" sheet (name, price, quantity, who had it); **who had what** with an avatar on every item, shared items, "Split rest evenly", tax shared in proportion or evenly, a guest added to one bill, and a **claim link** per person; **everyone's share** with fractions (½ Gyoza), tax, rounding to the yen, each person's own home currency (Daniel sees CA$), the payer's "Collects ¥3,924 from 3 people", Share summary, Close / Reopen. Desktop shows the receipt lines on the left and the steps on the right.
 - **Claim link** — `/s/[token]` is a public page with no account: "Joe sent you a bill from Afuri. Chris, pick what you ordered." It runs through two token-scoped database functions that expose first names and items only, mark the link opened, and accept picks only while the bill is open. Tokens are issued by the database, unusable until the sender shares them, and expire after 30 days.
 - **Cross-feature** — Restaurant → "Split a bill here"; Camera → "Send to Split" turns priced menu lines into a draft bill; Split → each person's home currency uses the Currency rates.
-- **Atlas Premium Pass** — `entitlements` (single trip, monthly, yearly, gift) gate Split on web and mobile; the demo account holds a yearly pass. Checkout, gifting and redeem are the next round.
+- **Atlas Premium Pass** — `entitlements` (single trip, monthly, yearly, gift) gate Split on web and mobile; the demo account holds a yearly pass.
 
-Scheduled for the next round (routes exist as honest placeholders): Atlas Premium Pass checkout and gifting, offline states.
+**Round 6 (Atlas Premium Pass, Profile & Settings, offline & error states), done and verified on web and mobile:**
+
+- **Checkout** (mockup 7a) — the three plans as a radio group (Single trip · Japan 2027 $2.99 one time, Monthly $4.99, Yearly $49.99 · Save 17%), a way to pay, one Pay button; **Congratulations** with the pass on the avatar, "Yearly · renews Mar 3, 2028", what was paid with, the receipt line, "Scan tonight's receipt". Card details never touch Voya: purchases go through a `BillingProvider` interface (`packages/core/src/providers/billing.ts`). The mock takes payment instantly and is honoured only in demo mode; in a real deployment the vendor's webhook (`supabase/functions/billing-webhook`, a stub with HMAC verification) grants the entitlement through `grant_pass` / `grant_extension` with the service role, idempotent on the receipt id. Stripe, RevenueCat or store billing slot in behind the same interface — pick one and only the adapter changes.
+- **Gifting** (mockup 8c) — Monthly/Yearly members gift one traveler per trip 3 days ("Voya account · no pass", "Guest · will need to create an account", "Already has Atlas Premium Pass · yearly" greyed out). The gift is a 24-hex code in a link; `/gift/[code]` shows "A gift from Joe · 3 days of Atlas Premium Pass · ends Tue, Mar 18 · 11:59 PM JST"; accepting (`redeem_gift`) links the traveler row, adds membership and inserts the entitlement in one call. Recipients **extend** for $0.99 (1–7 days, "7 days covers you through Thu, Mar 25 · 4 more nights after that"), or buy the single-trip pass. Codes can also be pasted on the pass page (web) or the Redeem screen (mobile).
+- **Pass mark** (mockup 8a) — the four-point compass star on the accent amber: ring + corner badge for holders, ring only for gifted access; on People rows, Split results, the sidebar user row, Profile and the pass page. `trip_pass_marks` exposes only "which members hold a pass, and of what kind", nothing about receipts. Sidebar Premium badges turn into the mark once you hold a pass.
+- **Profile & Settings** (mockup 6a) — name, email, the pass line, Trips / Saved places / Countries; **Defaults** every tool reuses (home currency, home time zone, "I speak", km/mi) in an edit dialog, saved to `profiles` (new `units`, `languages`, `settings` columns); Account rows for the pass, offline downloads, privacy & data. **Settings**: theme (Light / Dark / Auto, persisted), Trip behaviour switches (suggest local language / currency, show home time, quick action button), Offline packs (the trip pack, one map per city with the rest grouped "Wi-Fi only", the text translation pack; sizes are estimates, downloads are per device).
+- **Permissions & legal** (mockup 7a) — Voya explains each permission once *before* the OS or browser asks (location for directions, microphone for voice translation, camera for receipts), with the fallback if you decline; the Permissions page shows each capability's state with the way back in (OS Settings on mobile, the browser's site settings on the web), plus Terms, Privacy, Refunds, Cookies, Licences and Download / delete my data. Terms open with the mockup's "Short version" cards.
+- **Offline & error states** (mockup 6b) — "You're offline · showing Japan 2027 saved 41 min ago" above every page; Home's "Available offline" card (saved places, map and routes, the rate from 41 min ago, text translation, and what needs internet); Translate keeps working offline with the on-device phrasebook while voice, camera and receipt scan say so; Directions offer "Show address in 日本語" for a taxi when the connection is slow; a stale rate is dashed-underlined; "Couldn't sync your trips" and "Atlas Premium Pass ended" states; error boundaries that keep the device usable.
+- **Demo accounts** — `joe@example.com` (yearly pass) and `chris@example.com` (no pass, the gift recipient); Sarah holds her own pass. Password `VoyaDemo-2027!` for both. Local seed only.
+
+Next: release engineering (a real Supabase project, web deploy, EAS builds, CI, the billing adapter) and the rename to Get Going.
 
 ## Run it
 
@@ -73,9 +83,9 @@ The service-role key is never used by either app; the web app refuses to start i
 ## Verify
 
 ```bash
-pnpm test                          # tokens contrast (15) + core (91) + web components (9, axe) + mobile (32, RNTL)
-pnpm --filter @voya/core test:db   # migrations + seed + RLS scenarios (16) on a throwaway Postgres 16
-pnpm test:e2e                      # Playwright: 270 tests across iPhone/Android/iPad/desktop × light/dark
+pnpm test                          # tokens contrast (15) + core (103) + web components (9, axe) + mobile (41, RNTL)
+pnpm --filter @voya/core test:db   # migrations + seed + RLS scenarios (21) on a throwaway Postgres 16
+pnpm test:e2e                      # Playwright: 312 tests across iPhone/Android/iPad/desktop × light/dark
 pnpm typecheck && pnpm lint
 ```
 
@@ -94,12 +104,13 @@ The e2e suite runs against a production build in demo mode. Every screen is chec
 ## Layout
 
 ```
-apps/web/src/app        routes: (marketing)/ landing · (auth)/* · (app)/{home,trips/[id]/people,plan,navigate/{route,day,tree},translate/{conversation,camera,driver},currency,split/{new,[id]},profile,…} · s/[token] claim link · join/[token] invite · legal/[doc]
+apps/web/src/app        routes: (marketing)/ landing · (auth)/* · (app)/{home,trips/[id]/people,plan,navigate/{route,day,tree},translate/{conversation,camera,driver},currency,split/{new,[id]},pass/{done,gift,extend},profile,settings/permissions} · s/[token] claim link · join/[token] invite · gift/[code] · legal/[doc]
 apps/web/src/components ui primitives, shell (tab bar / rail / sidebar), map, per-feature components
 apps/web/src/proxy.ts   CSP nonce, security headers, session refresh, route protection
-apps/mobile/app         expo-router: (auth)/* · (tabs)/* · plan · place/[id] · trips/[id] · people · navigate/{route,day,tree} · translate/{index,conversation,camera,driver} · currency · split/{index,new,[id]}
-packages/core/src       domain.ts · schemas.ts · selectors.ts · navigate.ts · tree.ts · translate.ts · money.ts · split.ts · people.ts · format.ts · providers/* · db/*
-supabase/migrations     0100 schema · 0200 RLS · 0300 account deletion & export · 0400 routes · 0500 route trees · 0600 phrases & trip currencies · 0700 people, invites, bills, claim links, entitlements
+apps/mobile/app         expo-router: (auth)/* · (tabs)/* · plan · place/[id] · trips/[id] · people · navigate/{route,day,tree} · translate/{index,conversation,camera,driver} · currency · split/{index,new,[id]} · pass/{index,done,gift,extend,redeem} · settings/{index,permissions}
+packages/core/src       domain.ts · schemas.ts · selectors.ts · navigate.ts · tree.ts · translate.ts · money.ts · split.ts · people.ts · pass.ts · permissions.ts · format.ts · providers/* (incl. billing.ts) · db/*
+supabase/migrations     0100 schema · 0200 RLS · 0300 account deletion & export · 0400 routes · 0500 route trees · 0600 phrases & trip currencies · 0700 people, invites, bills, claim links, entitlements · 0800 pass gifts, purchase grants, profile defaults
+supabase/functions      billing-webhook (Edge Function stub: the only writer of entitlements, service role)
 ```
 
 See `SECURITY.md` for the threat model and controls.

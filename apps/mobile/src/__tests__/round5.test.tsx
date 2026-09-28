@@ -38,7 +38,7 @@ describe("People", () => {
     const share = jest.spyOn(Share, "share").mockResolvedValue({ action: Share.sharedAction, activityType: null } as never);
     await wrap(<PeopleScreen />);
     expect(await screen.findByRole("header", { name: "People · 4" })).toBeOnTheScreen();
-    expect(screen.getByLabelText("Joe Obligar, You · Organizer · All 14 nights · Home USD")).toBeOnTheScreen();
+    expect(screen.getByLabelText("Joe Obligar, You · Organizer · All 14 nights · Home USD, Atlas Premium Pass")).toBeOnTheScreen();
     expect(screen.getByLabelText("Daniel, Guest · Tokyo only, Mar 15–20 · Home CAD")).toBeOnTheScreen();
     expect(screen.getByLabelText(/^Group A: Joe, Sarah\. Used in Shibuya afternoon route/)).toBeOnTheScreen();
 
@@ -85,7 +85,8 @@ describe("Scan", () => {
     expect(screen.getByText("Afuri Ramen Harajuku")).toBeOnTheScreen();
     expect(screen.getByText("4 people from your trip")).toBeOnTheScreen();
     await fireEvent.press(screen.getByRole("button", { name: "Snap" }));
-    expect(ImagePicker.launchCameraAsync).toHaveBeenCalled();
+    await fireEvent.press(await screen.findByRole("button", { name: "Continue" })); // round 6: the camera sheet explains first, once per device
+    await waitFor(() => expect(ImagePicker.launchCameraAsync).toHaveBeenCalled());
     await waitFor(() => expect(screen.getByText("1 page ready")).toBeOnTheScreen());
     await fireEvent.press(screen.getByRole("button", { name: "Read the receipt" }));
     await waitFor(() => expect(mockRouter.replace).toHaveBeenCalledWith({ pathname: "/split/[id]", params: { id: expect.stringMatching(/^[0-9a-f-]{36}$/) } }));

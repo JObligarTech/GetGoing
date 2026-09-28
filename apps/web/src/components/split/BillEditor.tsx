@@ -6,10 +6,11 @@ import { ArrowLeft, Check, Languages, Link2, Minus, Pencil, Plus, Share2, Trash2
 import { motion, useReducedMotion } from "motion/react";
 import {
   billShareText, billTotal, computeBill, convert, formatMoney, fractionLabel, initial, splitRestEvenly, toggleShare,
-  type BillBundle, type BillInput, type BillItemRow, type BillParticipantRow, type Translation,
+  type BillBundle, type BillInput, type BillItemRow, type BillParticipantRow, type PassMark, type Translation,
 } from "@voya/core";
 import { Button } from "@/components/ui/Button";
 import { Card, Chip } from "@/components/ui/primitives";
+import { Avatar } from "@/components/ui/PassMark";
 import { cx } from "@/lib/utils";
 
 export interface BillEditorProps {
@@ -20,6 +21,8 @@ export interface BillEditorProps {
   /** bill currency → home currency rate, for every home currency on the bill */
   rates: Record<string, number>;
   homeCurrency: string;
+  /** Participant id → pass mark, so the results avatars carry it (mockup 8a). */
+  participantMarks?: Record<string, PassMark>;
   startStep: 1 | 2 | 3;
   saveAction: (input: unknown) => Promise<{ billId: string } | { error: string }>;
   claimLinkAction: (tripId: unknown, billId: unknown, participantId: unknown) => Promise<{ url: string } | { error: string }>;
@@ -34,7 +37,7 @@ const STEP_TITLE: Record<Step, string> = { 1: "Check items", 2: "Who had what", 
  * item, claim links), 3 Everyone's share (per person, home currency, close). Desktop shows the
  * receipt lines on the left and the steps on the right (mockup 5c).
  */
-export function BillEditor({ initial: init, tripName, tripLanguage, userLanguage, rates, homeCurrency, startStep, saveAction, claimLinkAction, translateAction, deleteAction }: BillEditorProps) {
+export function BillEditor({ initial: init, tripName, tripLanguage, userLanguage, rates, homeCurrency, participantMarks = {}, startStep, saveAction, claimLinkAction, translateAction, deleteAction }: BillEditorProps) {
   const router = useRouter();
   const reduce = useReducedMotion();
   const [bill, setBill] = useState(init.bill);
@@ -265,7 +268,7 @@ export function BillEditor({ initial: init, tripName, tripLanguage, userLanguage
                 return (
                   <motion.li key={p.id} initial={reduce ? false : { y: 8 }} animate={{ y: 0 }} transition={{ duration: 0.2, delay: reduce ? 0 : idx * 0.04 }} className="card flex flex-col gap-2 p-3.5" aria-label={`${p.name}: ${money(pt.total)}${h ? `, about ${h}` : ""}${isPayer ? ", paid" : ""}`}>
                     <div className="flex items-center gap-3">
-                      <span aria-hidden="true" className="inline-flex h-9 w-9 items-center justify-center rounded-full text-[13px] font-bold text-white" style={{ background: p.color }}>{initial(p.name)}</span>
+                      <Avatar name={p.name} color={p.color} size={36} mark={participantMarks[p.id] ?? null} />
                       <div className="min-w-0 flex-1">
                         <p className="flex items-center gap-2 text-[15px] font-bold">{p.name}{isPayer && <span className="text-[12px] font-semibold text-muted">· you paid</span>}{p.claim_status === "claimed" && <Chip className="h-5 px-1.5 text-[10px]">Claimed</Chip>}{p.claim_status === "opened" && <Chip tone="plain" className="h-5 px-1.5 text-[10px]">Link opened</Chip>}</p>
                         <p className="truncate text-[12px] text-muted">{isPayer && pt.collects > 0 ? `Collects ${money(pt.collects)} from ${comp.participants.length - 1} people` : pt.lines.map((l) => `${fractionLabel(l.fraction)}${fractionLabel(l.fraction) ? " " : ""}${l.label}`).concat(pt.tax ? ["tax"] : []).join(" · ")}</p>

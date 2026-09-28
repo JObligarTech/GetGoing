@@ -20,6 +20,18 @@ describe.skipIf(!url)("row level security", () => {
       uid ? JSON.stringify({ sub: uid, role: "authenticated" }) : "",
     ]);
   };
+  /** An expected failure inside the shared transaction: savepoint, assert the error code, roll back to it. */
+  let sp = 0;
+  const fails = async (sql: string, params: unknown[], code: string) => {
+    const name = `r6_${++sp}`;
+    await db.query(`savepoint ${name}`);
+    await expect(db.query(sql, params)).rejects.toMatchObject({ code });
+    await db.query(`rollback to savepoint ${name}`);
+  };
+  const asService = async () => {
+    await db.query("set role service_role");
+    await db.query("select set_config('request.jwt.claims', '', false)");
+  };
   const superuser = async () => {
     await db.query("reset role");
     await db.query("select set_config('request.jwt.claims', '', false)");
@@ -312,6 +324,89 @@ describe.skipIf(!url)("row level security", () => {
     expect(await count(`select count(*)::int n from public.bill_shares where bill_id='99999999-9999-4999-8999-999999999991'`)).toBe(7);
     expect((await db.query(`select status from public.bills where id='99999999-9999-4999-8999-999999999992'`)).rows[0].status).toBe("settled");
     expect((await db.query(`select claim_status from public.bill_participants where id='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa2'`)).rows[0].claim_status).toBe("claimed");
+  });
+
+  it("profiles carry trip defaults and settings; junk settings are refused", async () => {
+    await as(ALICE);
+    await db.query(`update public.profiles set units='mi', languages='{en,ja}', settings='{"showHomeTime":false}' where id=$1`, [ALICE]);
+    const { rows } = await db.query(`select units, languages, settings from public.profiles where id=$1`, [ALICE]);
+    expect(rows[0]).toEqual({ units: "mi", languages: ["en", "ja"], settings: { showHomeTime: false } });
+    await fails(`update public.profiles set settings='[1]' where id=$1`, [ALICE], "23514");
+    await fails(`update public.profiles set languages='{}' where id=$1`, [ALICE], "23514");
+  });
+
+  it("purchases are granted by the service role only, once per receipt; owners read their own", async () => {
+    await as(ALICE);
+    await fails(`select public.grant_pass($1, 'yearly', null, 'rcpt_1', 'Card ·· 1', 49.99, 'USD', 'test')`, [ALICE], "42501");
+    await asService();
+    const first = (await db.query(`select public.grant_pass($1, 'yearly', null, 'rcpt_1', 'Card ·· 1', 49.99, 'USD', 'test') id`, [ALICE])).rows[0].id;
+    const again = (await db.query(`select public.grant_pass($1, 'yearly', null, 'rcpt_1', 'Card ·· 1', 49.99, 'USD', 'test') id`, [ALICE])).rows[0].id;
+    expect(again).toBe(first);
+    await fails(`select public.grant_pass($1, 'trip', null, 'rcpt_2', null, 2.99, 'USD', 'test')`, [ALICE], "P0001");
+    const tripId = (await db.query(`select public.grant_pass($1, 'trip', $2, 'rcpt_3', 'Card ·· 1', 2.99, 'USD', 'test') id`, [MALLORY, TRIP])).rows[0].id;
+    const tripPass = (await db.query(`select * from public.entitlements where id = $1`, [tripId])).rows[0];
+    expect(tripPass.trip_id).toBe(TRIP);
+    expect(new Date(tripPass.ends_at).getTime() - new Date(tripPass.starts_at).getTime()).toBeGreaterThan(13 * 86_400_000);
+    await db.query(`delete from public.entitlements where plan_ref = 'rcpt_3'`); // undated trip → 14 days; not needed below
+    await as(ALICE);
+    expect(await count(`select count(*)::int n from public.entitlements`)).toBe(1);
+    await as(MALLORY);
+    expect(await count(`select count(*)::int n from public.entitlements`)).toBe(0);
+  });
+
+  it("gifts: a Yearly member gifts one traveler per trip; redeeming by code joins the trip for 3 days, once", async () => {
+    await as(ALICE);
+    const travelerId = (await db.query(`insert into public.travelers (id, trip_id, name) values (gen_random_uuid(), $1, 'Mal') returning id`, [TRIP])).rows[0].id;
+    const self = (await db.query(`select id from public.travelers where trip_id=$1 and user_id=$2`, [TRIP, ALICE])).rows[0].id;
+    await fails(`select public.create_pass_gift($1, $2)`, [TRIP, self], "P0001");
+    const gift = (await db.query(`select public.create_pass_gift($1, $2) g`, [TRIP, travelerId])).rows[0].g;
+    expect(gift.code).toMatch(/^[a-f0-9]{24}$/);
+    expect(gift.days).toBe(3);
+    await fails(`select public.create_pass_gift($1, $2)`, [TRIP, travelerId], "P0001"); // one per trip
+    await fails(`insert into public.pass_gifts (trip_id, giver_id, traveler_id) values ($1, $2, $3)`, [TRIP, ALICE, travelerId], "42501"); // RPC only
+
+    await as(null); // the gift page works before signing in, and anon sees nothing else
+    const preview = (await db.query(`select public.gift_preview($1) p`, [gift.code])).rows[0].p;
+    expect(preview).toMatchObject({ giver_name: "Alice", trip_name: "Alice Japan", traveler_name: "Mal", days: 3, status: "sent", expired: false });
+    await fails(`select * from public.pass_gifts`, [], "42501");
+    await fails(`select public.redeem_gift($1)`, [gift.code], "42501");
+
+    await as(MALLORY);
+    const redeemed = (await db.query(`select public.redeem_gift($1) r`, [gift.code])).rows[0].r;
+    expect(redeemed.trip_id).toBe(TRIP);
+    expect(new Date(redeemed.ends_at).getTime()).toBeGreaterThan(Date.now() + 2 * 86_400_000);
+    expect((await db.query(`select user_id from public.travelers where id=$1`, [travelerId])).rows[0].user_id).toBe(MALLORY);
+    expect((await db.query(`select kind, trip_id, gifted_by from public.entitlements`)).rows).toEqual([{ kind: "gift", trip_id: TRIP, gifted_by: ALICE }]);
+    await fails(`select public.redeem_gift($1)`, [gift.code], "P0002");
+    const marks = (await db.query(`select * from public.trip_pass_marks($1) order by kind::text`, [TRIP])).rows;
+    expect(marks).toEqual([{ user_id: MALLORY, kind: "gift" }, { user_id: ALICE, kind: "yearly" }]);
+    expect((await db.query(`select status, recipient_id from public.pass_gifts`)).rows[0]).toEqual({ status: "accepted", recipient_id: MALLORY });
+    await as(ALICE);
+    await fails(`select public.redeem_gift($1)`, [gift.code], "P0002");
+  });
+
+  it("extensions continue from the gift's end for 1–7 days; service role only", async () => {
+    await as(MALLORY);
+    await fails(`select public.grant_extension($1, $2, 7, 'rcpt_ext', 'Card ·· 1', 'test')`, [MALLORY, TRIP], "42501");
+    await asService();
+    await fails(`select public.grant_extension($1, $2, 9, 'rcpt_ext', 'Card ·· 1', 'test')`, [MALLORY, TRIP], "P0001");
+    await fails(`select public.grant_extension($1, $2, 2, 'rcpt_ext', 'Card ·· 1', 'test')`, [ALICE, TRIP], "P0002"); // nothing gifted to Alice
+    const extId = (await db.query(`select public.grant_extension($1, $2, 7, 'rcpt_ext', 'Card ·· 1', 'test') id`, [MALLORY, TRIP])).rows[0].id;
+    const ext = (await db.query(`select * from public.entitlements where id = $1`, [extId])).rows[0];
+    const giftEnd = (await db.query(`select ends_at from public.entitlements where kind='gift'`)).rows[0].ends_at;
+    expect(ext.kind).toBe("extension");
+    expect(Math.round((new Date(ext.ends_at).getTime() - new Date(giftEnd).getTime()) / 86_400_000)).toBe(7);
+    expect(Number(ext.amount)).toBe(0.99);
+    await as(MALLORY);
+    expect(await count(`select count(*)::int n from public.entitlements where kind in ('gift','extension')`)).toBe(2);
+  });
+
+  it("seed: Chris and Sarah are members with accounts; Sarah holds a pass, Chris does not", async () => {
+    await superuser();
+    expect(await count(`select count(*)::int n from public.trip_members where trip_id='22222222-2222-4222-8222-222222222221'`)).toBe(3);
+    expect((await db.query(`select user_id from public.travelers where trip_id='22222222-2222-4222-8222-222222222221' and name='Chris'`)).rows[0].user_id).toBe("11111111-1111-4111-8111-111111111112");
+    expect(await count(`select count(*)::int n from public.entitlements where user_id='11111111-1111-4111-8111-111111111114'`)).toBe(1);
+    expect(await count(`select count(*)::int n from public.entitlements where user_id='11111111-1111-4111-8111-111111111112'`)).toBe(0);
   });
 
   it("delete_my_account removes the user and hands trips to an editor", async () => {

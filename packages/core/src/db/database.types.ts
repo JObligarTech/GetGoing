@@ -22,6 +22,9 @@ export type ProfileRow = {
   locale: string;
   theme: "system" | "light" | "dark";
   marketing_opt_in: boolean;
+  units: "km" | "mi";
+  languages: string[];
+  settings: Json;
   created_at: string;
   updated_at: string;
 }
@@ -53,7 +56,8 @@ export type TripInviteRow = {
 }
 export type BillStatus = "draft" | "open" | "settled";
 export type ClaimStatus = "none" | "sent" | "opened" | "claimed";
-export type PassKind = "trip" | "monthly" | "yearly" | "gift";
+export type PassKind = "trip" | "monthly" | "yearly" | "gift" | "extension";
+export type GiftStatus = "sent" | "accepted" | "expired" | "revoked";
 export type BillRow = {
   id: string; trip_id: string; place_id: string | null; merchant: string; currency: string; status: BillStatus; bill_date: string | null;
   tax_amount: number; tax_label: string | null; service_amount: number; discount_amount: number; rounding_unit: number; tax_mode: "proportional" | "even";
@@ -69,7 +73,15 @@ export type BillParticipantRow = {
 export type BillShareRow = { item_id: string; participant_id: string; bill_id: string; trip_id: string }
 export type EntitlementRow = {
   id: string; user_id: string; kind: PassKind; trip_id: string | null; starts_at: string; ends_at: string; gifted_by: string | null; source: string | null; created_at: string;
+  gift_id: string | null; plan_ref: string | null; paid_with: string | null; amount: number | null; currency: string | null;
 }
+/** A 3-day gift from a Monthly/Yearly member to a traveler on the trip; the code is the only way to redeem it. */
+export type PassGiftRow = {
+  id: string; trip_id: string; giver_id: string; traveler_id: string; recipient_id: string | null; code: string; status: GiftStatus; days: number;
+  created_at: string; expires_at: string; accepted_at: string | null; ends_at: string | null;
+}
+/** Which members of a trip hold a pass (kind only) — from `trip_pass_marks`, so avatars can carry the mark. */
+export type PassMarkRow = { user_id: string; kind: PassKind }
 export type CategoryRow = { id: string; trip_id: string; name: string; icon: string; color: string; sort_order: number; created_at: string }
 export type PlaceRow = {
   id: string;
@@ -123,7 +135,7 @@ export type TripCurrencyRow = { trip_id: string; code: string; label: string | n
 export type Database = {
   public: {
     Tables: {
-      profiles: { Row: Row<ProfileRow>; Insert: Insert<ProfileRow, "avatar_url" | "home_currency" | "home_tz" | "locale" | "theme" | "marketing_opt_in" | "created_at" | "updated_at">; Update: Partial<ProfileRow>; Relationships: [] };
+      profiles: { Row: Row<ProfileRow>; Insert: Insert<ProfileRow, "avatar_url" | "home_currency" | "home_tz" | "locale" | "theme" | "marketing_opt_in" | "units" | "languages" | "settings" | "created_at" | "updated_at">; Update: Partial<ProfileRow>; Relationships: [] };
       trips: { Row: Row<TripRow>; Insert: Insert<TripRow, "id" | "countries" | "cities" | "start_date" | "end_date" | "status" | "local_currency" | "local_tz" | "local_language" | "notes" | "created_at" | "updated_at", "cover_letter">; Update: Partial<Omit<TripRow, "cover_letter">>; Relationships: [] };
       trip_members: { Row: TripMemberRow; Insert: Insert<TripMemberRow, "role" | "created_at">; Update: Partial<TripMemberRow>; Relationships: [] };
       travelers: { Row: TravelerRow; Insert: Insert<TravelerRow, "id" | "user_id" | "color" | "created_at" | "email" | "phone" | "home_currency" | "joining_start" | "joining_end" | "joining_note" | "updated_at">; Update: Partial<TravelerRow>; Relationships: [] };
@@ -132,7 +144,8 @@ export type Database = {
       bill_items: { Row: BillItemRow; Insert: Insert<BillItemRow, "id" | "local_name" | "qty" | "confidence" | "sort_order" | "created_at">; Update: Partial<BillItemRow>; Relationships: [] };
       bill_participants: { Row: BillParticipantRow; Insert: Insert<BillParticipantRow, "id" | "traveler_id" | "color" | "home_currency" | "claim_token" | "claim_status" | "claim_expires_at" | "created_at">; Update: Partial<BillParticipantRow>; Relationships: [] };
       bill_shares: { Row: BillShareRow; Insert: BillShareRow; Update: Partial<BillShareRow>; Relationships: [] };
-      entitlements: { Row: EntitlementRow; Insert: Insert<EntitlementRow, "id" | "trip_id" | "starts_at" | "gifted_by" | "source" | "created_at">; Update: Partial<EntitlementRow>; Relationships: [] };
+      entitlements: { Row: EntitlementRow; Insert: Insert<EntitlementRow, "id" | "trip_id" | "starts_at" | "gifted_by" | "source" | "created_at" | "gift_id" | "plan_ref" | "paid_with" | "amount" | "currency">; Update: Partial<EntitlementRow>; Relationships: [] };
+      pass_gifts: { Row: PassGiftRow; Insert: Insert<PassGiftRow, "id" | "recipient_id" | "code" | "status" | "days" | "created_at" | "expires_at" | "accepted_at" | "ends_at">; Update: Partial<PassGiftRow>; Relationships: [] };
       categories: { Row: CategoryRow; Insert: Insert<CategoryRow, "id" | "icon" | "color" | "sort_order" | "created_at">; Update: Partial<CategoryRow>; Relationships: [] };
       places: { Row: PlaceRow; Insert: Insert<PlaceRow, "id" | "address" | "local_name" | "local_address" | "lat" | "lng" | "provider" | "provider_ref" | "phone" | "website" | "hours" | "notes" | "priority" | "created_by" | "created_at" | "updated_at">; Update: Partial<PlaceRow>; Relationships: [] };
       place_categories: { Row: PlaceCategoryRow; Insert: PlaceCategoryRow; Update: Partial<PlaceCategoryRow>; Relationships: [] };
@@ -156,8 +169,14 @@ export type Database = {
       accept_trip_invite: { Args: { p_token: string }; Returns: string };
       bill_claim_view: { Args: { p_token: string }; Returns: Json };
       bill_claim_submit: { Args: { p_token: string; p_item_ids: string[] }; Returns: Json };
+      create_pass_gift: { Args: { p_trip_id: string; p_traveler_id: string }; Returns: Json };
+      gift_preview: { Args: { p_code: string }; Returns: Json };
+      redeem_gift: { Args: { p_code: string }; Returns: Json };
+      trip_pass_marks: { Args: { p_trip_id: string }; Returns: PassMarkRow[] };
+      grant_pass: { Args: { p_user_id: string; p_kind: PassKind; p_trip_id: string | null; p_plan_ref: string; p_paid_with: string | null; p_amount: number | null; p_currency: string | null; p_source: string }; Returns: string };
+      grant_extension: { Args: { p_user_id: string; p_trip_id: string; p_days: number; p_plan_ref: string; p_paid_with: string | null; p_source: string }; Returns: string };
     };
-    Enums: { trip_status: TripStatus; member_role: MemberRole; stay_kind: StayKind; place_priority: PlacePriority; travel_mode: TravelModeDb; bill_status: BillStatus; claim_status: ClaimStatus; pass_kind: PassKind };
+    Enums: { trip_status: TripStatus; member_role: MemberRole; stay_kind: StayKind; place_priority: PlacePriority; travel_mode: TravelModeDb; bill_status: BillStatus; claim_status: ClaimStatus; pass_kind: PassKind; gift_status: GiftStatus };
     CompositeTypes: Record<string, never>;
   };
 }

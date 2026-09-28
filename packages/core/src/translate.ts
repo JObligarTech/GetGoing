@@ -24,6 +24,7 @@ export const LANGUAGES: Language[] = [
   { code: "en", name: "English", native: "English", speech: "en-US" },
   { code: "ja", name: "Japanese", native: "日本語", speech: "ja-JP" },
   { code: "ko", name: "Korean", native: "한국어", speech: "ko-KR" },
+  { code: "tl", name: "Tagalog", native: "Tagalog", speech: "fil-PH" },
   { code: "zh", name: "Chinese", native: "中文", speech: "zh-CN" },
   { code: "th", name: "Thai", native: "ไทย", speech: "th-TH" },
   { code: "vi", name: "Vietnamese", native: "Tiếng Việt", speech: "vi-VN" },

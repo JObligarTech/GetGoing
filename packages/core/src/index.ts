@@ -8,6 +8,8 @@ export * from "./translate";
 export * from "./money";
 export * from "./split";
 export * from "./people";
+export * from "./pass";
+export * from "./permissions";
 export * from "./db";
 export * from "./providers";
 export * from "./demo";

@@ -2,14 +2,14 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { z } from "zod";
 import { ArrowLeft } from "lucide-react";
-import { pluralize, travelerGroups } from "@voya/core";
+import { giftStatusLabel, pluralize, travelerGroups } from "@voya/core";
 import { PeopleList } from "@/components/people/PeopleList";
 import { Page } from "@/components/shell/Page";
 import { Button } from "@/components/ui/Button";
 import { FadeIn } from "@/components/ui/Motion";
 import { PageHeader } from "@/components/ui/primitives";
 import { addTravelerAction, createInviteAction, removeTravelerAction, updateTravelerAction } from "@/app/(app)/people/actions";
-import { getTripBundle } from "@/lib/data";
+import { getTripBundle, now } from "@/lib/data";
 import { requireUser } from "@/lib/session";
 
 export const metadata: Metadata = { title: "People" };
@@ -38,6 +38,8 @@ export default async function PeoplePage({ params }: { params: Promise<{ id: str
           userFirstName={user.profile.display_name.split(" ")[0] ?? "A traveler"}
           homeCurrency={user.profile.home_currency}
           pendingInvites={bundle.tripInvites.filter((i) => i.traveler_id && new Date(i.expires_at) > new Date()).map((i) => i.traveler_id!)}
+          marks={bundle.passMarks}
+          giftNotes={Object.fromEntries(bundle.passGifts.map((g) => [g.traveler_id, giftStatusLabel(g, bundle.travelers.find((t) => t.id === g.traveler_id)?.name.split(" ")[0] ?? "them", now())]))}
           addAction={addTravelerAction}
           updateAction={updateTravelerAction}
           removeAction={removeTravelerAction}

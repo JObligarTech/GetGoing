@@ -1,7 +1,7 @@
 import "server-only";
 import { cookies } from "next/headers";
 import {
-  demoBundle, demoPastBills, demoTrips, nextTravelerColor, type BillInput, type BillListItem, type ClaimView, type ItineraryItem, type Phrase, type PhraseInput, type RouteInput, type TravelerInput, type TravelerRow,
+  DEMO_NOW, demoAllEntitlements, demoBundle, demoPastBills, demoTrips, demoUsers, extensionEndsAt, giftEndsAt, nextTravelerColor, passWindow, type BillInput, type BillListItem, type ClaimView, type EntitlementRow, type ItineraryItem, type PassGiftRow, type Phrase, type PhraseInput, type ProfileRow, type PurchaseReceipt, type RouteInput, type TravelerInput, type TravelerRow,
   type TreeInput, type TripBundle, type TripCurrencyInput, type TripCurrencyRow, type TripInput, type TripInviteRow, type TripListItem,
 } from "@voya/core";
 
@@ -14,11 +14,30 @@ import {
 export const DEMO_SID_COOKIE = "voya_demo_sid";
 const MAX_SESSIONS = 200;
 
-interface DemoState { trips: TripListItem[]; bundles: Map<string, TripBundle> }
+interface DemoState { trips: TripListItem[]; bundles: Map<string, TripBundle>; entitlements: Map<string, EntitlementRow[]>; profiles: Map<string, ProfileRow> }
 const sessions = new Map<string, DemoState>();
 
 function fresh(): DemoState {
-  return { trips: structuredClone(demoTrips), bundles: new Map([[demoBundle.trip.id, structuredClone(demoBundle)]]) };
+  const entitlements = new Map<string, EntitlementRow[]>();
+  for (const e of demoAllEntitlements) entitlements.set(e.user_id, [...(entitlements.get(e.user_id) ?? []), structuredClone(e)]);
+  return { trips: structuredClone(demoTrips), bundles: new Map([[demoBundle.trip.id, structuredClone(demoBundle)]]), entitlements, profiles: new Map(demoUsers.map((u) => [u.id, structuredClone(u.profile)])) };
+}
+const hex = (bytes: number) => [...crypto.getRandomValues(new Uint8Array(bytes))].map((x) => x.toString(16).padStart(2, "0")).join("");
+const isActiveAt = (e: Pick<EntitlementRow, "starts_at" | "ends_at" | "trip_id">, tripId: string, at: Date) => new Date(e.starts_at).getTime() <= at.getTime() && new Date(e.ends_at).getTime() > at.getTime() && (e.trip_id == null || e.trip_id === tripId);
+/**
+ * Mirrors trip_pass_marks within this sandbox: the kind of the longest-running active pass per
+ * member, plus gifts accepted on the trip (their recipient shows the ring even from another browser).
+ */
+function marks(s: DemoState, b: TripBundle): TripBundle["passMarks"] {
+  const out: TripBundle["passMarks"] = [];
+  for (const t of b.travelers) {
+    if (!t.user_id) continue;
+    const own = (s.entitlements.get(t.user_id) ?? []).filter((e) => isActiveAt(e, b.trip.id, DEMO_NOW));
+    const gifted = b.passGifts.filter((g) => g.status === "accepted" && g.recipient_id === t.user_id && g.ends_at && isActiveAt({ starts_at: g.accepted_at ?? g.created_at, ends_at: g.ends_at, trip_id: b.trip.id }, b.trip.id, DEMO_NOW)).map((g) => ({ kind: "gift" as const, ends_at: g.ends_at! }));
+    const best = [...own, ...gifted].sort((x, y) => new Date(y.ends_at).getTime() - new Date(x.ends_at).getTime())[0];
+    if (best && !out.some((m) => m.user_id === t.user_id)) out.push({ user_id: t.user_id, kind: best.kind });
+  }
+  return out;
 }
 
 /** Every sandbox's bundles: token lookups (claim links, invites) work across browsers, like the real database. */
@@ -40,7 +59,86 @@ async function state(): Promise<DemoState> {
 
 export const demoStore = {
   trips: async () => (await state()).trips,
-  bundle: async (id: string) => (await state()).bundles.get(id) ?? null,
+  bundle: async (id: string) => {
+    const s = await state();
+    const b = s.bundles.get(id) ?? null;
+    if (b) b.passMarks = marks(s, b);
+    return b;
+  },
+  profile: async (userId: string) => (await state()).profiles.get(userId) ?? null,
+  async updateProfile(userId: string, patch: Partial<ProfileRow>): Promise<ProfileRow | null> {
+    const s = await state();
+    const p = s.profiles.get(userId);
+    if (!p) return null;
+    Object.assign(p, patch, { updated_at: new Date().toISOString() });
+    return p;
+  },
+
+  // ─── Atlas Premium Pass ──────────────────────────────────────────────────
+  entitlements: async (userId: string) => (await state()).entitlements.get(userId) ?? [],
+  /** Mirrors grant_pass: the mock receipt becomes an entitlement in this sandbox only (never in real mode). */
+  async grant(receipt: PurchaseReceipt, trip: TripListItem | null, tz: string): Promise<EntitlementRow> {
+    const s = await state();
+    const mine = s.entitlements.get(receipt.userId) ?? [];
+    const existing = mine.find((e) => e.plan_ref === receipt.receiptId);
+    if (existing) return existing;
+    if (receipt.plan === "extension") {
+      const gift = mine.filter((e) => e.trip_id === receipt.tripId && (e.kind === "gift" || e.kind === "extension")).sort((a, b) => b.ends_at.localeCompare(a.ends_at))[0];
+      if (!gift) throw new Error("no gifted pass to extend");
+      const from = new Date(Math.max(new Date(gift.ends_at).getTime(), DEMO_NOW.getTime()));
+      const row: EntitlementRow = { id: crypto.randomUUID(), user_id: receipt.userId, kind: "extension", trip_id: receipt.tripId, starts_at: new Date(Math.min(new Date(gift.ends_at).getTime(), DEMO_NOW.getTime())).toISOString(), ends_at: extensionEndsAt(from, tz, receipt.days ?? 1).toISOString(), gifted_by: gift.gifted_by, source: "mock", created_at: receipt.paidAt, gift_id: gift.gift_id, plan_ref: receipt.receiptId, paid_with: receipt.paidWith, amount: receipt.amount, currency: receipt.currency };
+      s.entitlements.set(receipt.userId, [...mine, row]);
+      return row;
+    }
+    const { startsAt, endsAt } = passWindow(receipt.plan, DEMO_NOW, trip, tz);
+    const row: EntitlementRow = { id: crypto.randomUUID(), user_id: receipt.userId, kind: receipt.plan, trip_id: receipt.plan === "trip" ? receipt.tripId : null, starts_at: startsAt.toISOString(), ends_at: endsAt.toISOString(), gifted_by: null, source: "mock", created_at: receipt.paidAt, gift_id: null, plan_ref: receipt.receiptId, paid_with: receipt.paidWith, amount: receipt.amount, currency: receipt.currency };
+    s.entitlements.set(receipt.userId, [...mine, row]);
+    return row;
+  },
+  /** Mirrors create_pass_gift; the checks live in the action (canGift, candidates). */
+  async createGift(tripId: string, giverId: string, travelerId: string): Promise<PassGiftRow | null> {
+    const b = (await state()).bundles.get(tripId);
+    if (!b) return null;
+    const row: PassGiftRow = { id: crypto.randomUUID(), trip_id: tripId, giver_id: giverId, traveler_id: travelerId, recipient_id: null, code: hex(12), status: "sent", days: 3, created_at: DEMO_NOW.toISOString(), expires_at: new Date(DEMO_NOW.getTime() + 30 * 86_400_000).toISOString(), accepted_at: null, ends_at: null };
+    b.passGifts.push(row);
+    return row;
+  },
+  async giftPreview(code: string) {
+    for (const b of await allBundles()) {
+      const g = b.passGifts.find((x) => x.code === code);
+      if (!g) continue;
+      const giver = [...sessions.values()].map((s) => s.profiles.get(g.giver_id ?? "")).find(Boolean);
+      return { trip_name: b.trip.name, trip_tz: b.trip.local_tz, trip_end: b.trip.end_date, days: g.days, status: g.status, giver_name: giver?.display_name.split(" ")[0] ?? "A traveler", traveler_name: b.travelers.find((t) => t.id === g.traveler_id)?.name ?? "you", expired: new Date(g.expires_at).getTime() <= DEMO_NOW.getTime(), ends_preview: giftEndsAt(DEMO_NOW, b.trip.local_tz ?? "UTC", g.days).toISOString() };
+    }
+    return null;
+  },
+  /** Mirrors redeem_gift: link the traveler, grant the gift entitlement in the redeemer's sandbox, mark the gift accepted. */
+  async redeemGift(code: string, userId: string): Promise<{ entitlement: EntitlementRow; tripId: string } | { error: string }> {
+    const s = await state();
+    for (const b of await allBundles()) {
+      const g = b.passGifts.find((x) => x.code === code);
+      if (!g) continue;
+      if (g.status !== "sent" || new Date(g.expires_at).getTime() <= DEMO_NOW.getTime()) return { error: "This gift is no longer available." };
+      if (g.giver_id === userId) return { error: "You can't redeem your own gift." };
+      const tr = b.travelers.find((t) => t.id === g.traveler_id);
+      if (tr?.user_id && tr.user_id !== userId) return { error: "This gift is for someone else." };
+      if ((s.entitlements.get(userId) ?? []).some((e) => isActiveAt(e, b.trip.id, DEMO_NOW))) return { error: "You already have a pass for this trip." };
+      if (tr && !tr.user_id) tr.user_id = userId;
+      const ends = giftEndsAt(DEMO_NOW, b.trip.local_tz ?? "UTC", g.days);
+      const row: EntitlementRow = { id: crypto.randomUUID(), user_id: userId, kind: "gift", trip_id: b.trip.id, starts_at: DEMO_NOW.toISOString(), ends_at: ends.toISOString(), gifted_by: g.giver_id, source: "gift", created_at: DEMO_NOW.toISOString(), gift_id: g.id, plan_ref: null, paid_with: null, amount: null, currency: null };
+      s.entitlements.set(userId, [...(s.entitlements.get(userId) ?? []), row]);
+      Object.assign(g, { status: "accepted", recipient_id: userId, accepted_at: DEMO_NOW.toISOString(), ends_at: ends.toISOString() });
+      // The redeemer's own sandbox copy of the trip learns the same facts.
+      const mine = s.bundles.get(b.trip.id);
+      if (mine && mine !== b) {
+        const t = mine.travelers.find((x) => x.id === g.traveler_id);
+        if (t && !t.user_id) t.user_id = userId;
+        if (!mine.passGifts.some((x) => x.id === g.id)) mine.passGifts.push({ ...g });
+      }
+      return { entitlement: row, tripId: b.trip.id };
+    }
+    return { error: "Gift not found." };
+  },
 
   async createTrip(input: TripInput, ownerId: string): Promise<TripListItem> {
     const s = await state();
@@ -55,7 +153,7 @@ export const demoStore = {
     s.trips.push(trip);
     s.bundles.set(id, {
       trip, travelers: [{ id: crypto.randomUUID(), trip_id: id, user_id: ownerId, name: "Joe Obligar", color: "#2F5D3A", created_at: ts, email: null, phone: null, home_currency: null, joining_start: null, joining_end: null, joining_note: null, updated_at: ts }],
-      categories: [], places: [], placeCategories: [], stays: [], itinerary: [], routes: [], routeStops: [], routeBranches: [], routeBranchTravelers: [], phrases: [], tripCurrencies: [], tripInvites: [], bills: [], billItems: [], billParticipants: [], billShares: [],
+      categories: [], places: [], placeCategories: [], stays: [], itinerary: [], routes: [], routeStops: [], routeBranches: [], routeBranchTravelers: [], phrases: [], tripCurrencies: [], tripInvites: [], bills: [], billItems: [], billParticipants: [], billShares: [], passGifts: [], passMarks: [],
     });
     return trip;
   },

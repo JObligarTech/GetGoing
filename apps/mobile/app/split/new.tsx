@@ -8,6 +8,8 @@ import { activePass, initial, languageByCode, parseReceipt, placeById, pluralize
 import { Button, Card, Chip, EmptyState, announce, screenStyles } from "@/components/ui";
 import { useData } from "@/lib/data";
 import { ocr, translation } from "@/lib/providers";
+import { PermissionSheet } from "@/components/PermissionSheet";
+import { markPrompt, needsPrompt } from "@/lib/offline";
 import { useSession } from "@/lib/session";
 import { useTheme } from "@/lib/theme";
 
@@ -26,6 +28,7 @@ export default function ScanReceiptScreen() {
   const [pages, setPages] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState<{ ok?: string; error?: string }>({});
+  const [askCamera, setAskCamera] = useState(false);
   if (!user || !active || !bundle) return <View style={s.screen}><View style={[s.content, { paddingTop: insets.top + 8 }]}><EmptyState title="No active trip" action={<Button label="Back" variant="secondary" onPress={() => router.back()} />} /></View></View>;
   if (!activePass(entitlements, active.id, now)) return <View style={s.screen}><View style={[s.content, { paddingTop: insets.top + 8 }]}><EmptyState title="Split needs Atlas Premium Pass" action={<Button label="Back" variant="secondary" onPress={() => router.back()} />} /></View></View>;
   const place = placeById(bundle, qPlace ?? null);
@@ -59,9 +62,10 @@ export default function ScanReceiptScreen() {
     } catch { setStatus({ error: "Couldn't read that receipt. Try a sharper photo with more light." }); } finally { setBusy(false); }
   };
   const pick = async (camera: boolean) => {
+    if (camera && needsPrompt("camera")) { setAskCamera(true); return; }
     try {
       const perm = camera ? await ImagePicker.requestCameraPermissionsAsync() : await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (!perm.granted) { setStatus({ error: camera ? "Camera permission was denied. Allow it in Settings to scan receipts." : "Photo access was denied. Allow it in Settings to choose a photo." }); return; }
+      if (!perm.granted) { setStatus({ error: camera ? "Camera permission was denied. Allow it in Settings to scan receipts." : "Photo access was denied. Allow it in Settings to choose a photo." }); announce("Permission denied."); return; }
       const res = camera ? await ImagePicker.launchCameraAsync({ mediaTypes: ["images"], quality: 0.8 }) : await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], quality: 0.8 });
       const asset = res.canceled ? null : res.assets?.[0];
       if (!asset) return;
@@ -72,6 +76,7 @@ export default function ScanReceiptScreen() {
 
   return (
     <View style={s.screen}>
+      <PermissionSheet cap="camera" visible={askCamera} onAllow={() => { markPrompt("camera", true); setAskCamera(false); void pick(true); }} onDecline={() => { markPrompt("camera", false); setAskCamera(false); void pick(false); }} />
       <ScrollView contentContainerStyle={[s.content, { paddingTop: insets.top + 8 }]}>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
           <Pressable accessibilityRole="button" accessibilityLabel="Back to Split" onPress={() => router.back()} style={{ width: 44, height: 44, borderRadius: 22, borderWidth: 1, borderColor: t.borderStrong, backgroundColor: t.surface, alignItems: "center", justifyContent: "center" }}><Ionicons name="arrow-back" size={20} color={t.text} /></Pressable>

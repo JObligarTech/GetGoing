@@ -3,7 +3,7 @@ import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import type { Route } from "next";
 import { z } from "zod";
-import { resetRequestSchema, signInSchema, signUpSchema } from "@voya/core";
+import { demoUsers, resetRequestSchema, signInSchema, signUpSchema } from "@voya/core";
 import { DEMO_COOKIE, isDemo, publicEnv } from "@/lib/env";
 import { DEMO_SID_COOKIE } from "@/lib/demo-store";
 import { checkRateLimit } from "@/lib/rate-limit";
@@ -33,9 +33,9 @@ function fieldErrors(err: z.ZodError): Record<string, string> {
 }
 
 /** Demo mode: session cookie + an isolated per-browser data sandbox id. */
-async function startDemoSession() {
+async function startDemoSession(userId = "1") {
   const store = await cookies();
-  store.set(DEMO_COOKIE, "1", { ...cookieOpts, maxAge: 60 * 60 * 24 * 7 });
+  store.set(DEMO_COOKIE, userId, { ...cookieOpts, maxAge: 60 * 60 * 24 * 7 });
   store.set(DEMO_SID_COOKIE, crypto.randomUUID(), { ...cookieOpts, maxAge: 60 * 60 * 24 * 7 });
 }
 
@@ -59,9 +59,10 @@ export async function signIn(_prev: ActionState, formData: FormData): Promise<Ac
   const next = safeNext(formData.get("next"));
 
   if (isDemo) {
-    if (parsed.data.email !== "joe@example.com" || parsed.data.password !== "VoyaDemo-2027!") return { error: "Email or password is incorrect.", values };
-    await startDemoSession();
-    await rememberUser("Joe", parsed.data.email);
+    const u = demoUsers.find((x) => x.email === parsed.data.email);
+    if (!u || parsed.data.password !== "VoyaDemo-2027!") return { error: "Email or password is incorrect.", values };
+    await startDemoSession(u.id);
+    await rememberUser(u.profile.display_name.split(" ")[0]!, parsed.data.email);
     redirect(next);
   }
 
@@ -165,7 +166,7 @@ export async function deleteAccount() {
   }
   const supabase = await createServerSupabase();
   const { error } = await supabase.rpc("delete_my_account");
-  if (error) redirect("/profile?error=delete");
+  if (error) redirect("/settings/permissions?error=delete" as Route);
   await supabase.auth.signOut();
   redirect("/welcome?deleted=1");
 }

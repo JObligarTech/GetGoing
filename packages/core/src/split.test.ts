@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 import { AFURI_BILL, DEMO_NOW, demoBundle, demoEntitlements } from "./demo";
 import { billBundle } from "./domain";
 import { mockOcr } from "./providers/mock";
-import { activePass, billShareText, billTotal, claimShare, computeBill, fractionLabel, parseReceipt, parseReceiptLine, passLabel, splitRestEvenly, toggleShare, type ClaimView } from "./split";
+import { billShareText, billTotal, claimShare, computeBill, fractionLabel, parseReceipt, parseReceiptLine, splitRestEvenly, toggleShare, type ClaimView } from "./split";
+import { activePass, passLabel } from "./pass";
 
 const afuri = () => billBundle(demoBundle, AFURI_BILL)!;
 

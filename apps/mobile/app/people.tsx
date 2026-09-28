@@ -3,8 +3,9 @@ import { Modal, Pressable, ScrollView, Share, Text, TextInput, View } from "reac
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { formatDateRange, initial, inviteText, travelerDetail, travelerGroups, travelerKind, type TravelerRow } from "@voya/core";
-import { Button, Card, Chip, EmptyState, Eyebrow, IconCoin, ListRow, Tile, announce, screenStyles } from "@/components/ui";
+import { formatDateRange, initial, inviteText, travelerDetail, travelerGroups, travelerKind, type TravelerRow, giftStatusLabel, markForUser } from "@voya/core";
+import { Button, Card, Chip, EmptyState, Eyebrow, IconCoin, ListRow, announce, screenStyles } from "@/components/ui";
+import { Avatar } from "@/components/pass";
 import { useData } from "@/lib/data";
 import { useSession } from "@/lib/session";
 import { useTheme } from "@/lib/theme";
@@ -22,7 +23,8 @@ export default function PeopleScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { user } = useSession();
-  const { active, bundle, addTraveler, updateTraveler, removeTraveler, createInvite } = useData();
+  const { now, active, bundle, addTraveler, updateTraveler, removeTraveler, createInvite } = useData();
+  const giftNote = (travelerId: string) => { const g = bundle?.passGifts.find((x) => x.traveler_id === travelerId); return g ? ` · ${giftStatusLabel(g, bundle!.travelers.find((x) => x.id === travelerId)?.name.split(" ")[0] ?? "them", now)}` : ""; };
   const [draft, setDraft] = useState<Draft | null>(null);
   const [status, setStatus] = useState<{ ok?: string; error?: string }>({});
   const [busy, setBusy] = useState(false);
@@ -85,11 +87,11 @@ export default function PeopleScreen() {
           {bundle.travelers.map((tr, i) => {
             const kind = travelerKind(tr, user.id);
             return (
-              <View key={tr.id} style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 14, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: t.border }} accessible accessibilityLabel={`${tr.name}, ${travelerDetail(tr, trip, user.id, user.profile.home_currency)}`}>
-                <Tile name={tr.name} size={40} radius={20} color={tr.color} />
+              <View key={tr.id} style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 14, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: t.border }} accessible accessibilityLabel={`${tr.name}, ${travelerDetail(tr, trip, user.id, user.profile.home_currency)}${giftNote(tr.id)}${markForUser(bundle.passMarks, tr.user_id) ? ", Atlas Premium Pass" : ""}`}>
+                <Avatar name={tr.name} size={40} color={tr.color} mark={markForUser(bundle.passMarks, tr.user_id)} />
                 <View style={{ flex: 1, minWidth: 0 }}>
                   <Text numberOfLines={1} style={{ fontSize: 15, fontFamily: t.font.semibold, color: t.text }}>{tr.name}</Text>
-                  <Text numberOfLines={1} style={{ fontSize: 12, color: t.textMuted, fontFamily: t.font.regular }}>{travelerDetail(tr, trip, user.id, user.profile.home_currency)}</Text>
+                  <Text numberOfLines={1} style={{ fontSize: 12, color: t.textMuted, fontFamily: t.font.regular }}>{travelerDetail(tr, trip, user.id, user.profile.home_currency)}{giftNote(tr.id)}</Text>
                 </View>
                 {kind === "guest" && <Button variant={invited.has(tr.id) ? "secondary" : "ghost"} size="sm" label={invited.has(tr.id) ? "Link" : "Invite"} accessibilityLabel={`${invited.has(tr.id) ? "Share invite link again for" : "Invite"} ${tr.name}`} onPress={() => invite(tr)} />}
                 {kind !== "you" && <Pressable accessibilityRole="button" accessibilityLabel={`Edit ${tr.name}`} onPress={() => edit(tr)} style={{ width: 40, height: 40, alignItems: "center", justifyContent: "center" }}><Ionicons name="pencil-outline" size={16} color={t.textMuted} /></Pressable>}

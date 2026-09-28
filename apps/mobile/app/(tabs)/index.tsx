@@ -6,7 +6,9 @@ import Animated, { FadeInDown, useReducedMotion } from "react-native-reanimated"
 import {
   categoriesForPlace, dayPins, formatClock, formatDateRange, formatTime, greeting, itemsForDay, localDate, placeById, placeColor,
   stayForDate, tripDayNumber, tripPhaseLabel, tzOffsetLabel,
+  MOCK_FX_AS_OF,
 } from "@voya/core";
+import { OfflineBanner, OfflineCard } from "@/components/Offline";
 import { TripMap } from "@/components/MapView";
 import { TripSwitcher } from "@/components/TripSwitcher";
 import { Button, Card, Chip, Dot, EmptyState, Eyebrow, IconCoin, ListRow, screenStyles } from "@/components/ui";
@@ -54,6 +56,7 @@ export default function Home() {
   return (
     <View style={s.screen}>
       <ScrollView contentContainerStyle={[s.content, { paddingTop: insets.top + 8 }]}>
+        <OfflineBanner tripName={active?.name ?? null} />
         <Animated.View entering={enter(0)} style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", minHeight: 44 }}>
           <View style={{ flex: 1 }}>
             <Text style={{ color: t.textMuted, fontSize: 13, fontFamily: t.font.medium }}>{hello}</Text>
@@ -95,6 +98,7 @@ export default function Home() {
 
         <Animated.View entering={enter(2)} style={{ gap: 8 }}>
           <View style={{ flexDirection: "row", alignItems: "baseline", justifyContent: "space-between" }}>
+            {bundle && <OfflineCard bundle={bundle} fxPair={active.local_currency ? `${user.profile.home_currency} → ${active.local_currency}` : null} fxAsOf={MOCK_FX_AS_OF} now={now} />}
             <Eyebrow>Saved for {formatDateRange(day, null)}</Eyebrow>
             <Text accessibilityRole="link" onPress={() => router.push("/plan")} style={{ color: t.primary, fontSize: 13, fontFamily: t.font.bold }}>All {active.place_count} places</Text>
           </View>

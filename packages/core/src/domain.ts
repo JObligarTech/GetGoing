@@ -1,6 +1,6 @@
 import type {
   BillItemRow, BillParticipantRow, BillRow, BillShareRow, CategoryRow, ItineraryItemRow, PhraseRow, PlaceCategoryRow, PlaceRow, ProfileRow, RouteBranchRow, RouteBranchTravelerRow, RouteRow, RouteStopRow,
-  StayRow, TravelerRow, TripCurrencyRow, TripInviteRow, TripRow,
+  PassGiftRow, PassMarkRow, StayRow, TravelerRow, TripCurrencyRow, TripInviteRow, TripRow,
 } from "./db/database.types";
 
 export interface TripBundle {
@@ -22,7 +22,10 @@ export interface TripBundle {
   billItems: BillItemRow[];
   billParticipants: BillParticipantRow[];
   billShares: BillShareRow[];
+  passGifts: PassGiftRow[];
+  passMarks: PassMarkRow[];
 }
+export type PassGift = PassGiftRow;
 export type Phrase = PhraseRow;
 export type Bill = BillRow;
 export type BillItem = BillItemRow;

@@ -109,6 +109,7 @@ describe("Send my location", () => {
     expect(daniel).toBeChecked();
     await fireEvent.press(daniel);
     await fireEvent.press(screen.getByRole("button", { name: "Share my location" }));
+    await fireEvent.press(await screen.findByRole("button", { name: "Continue" })); // round 6: the location sheet explains first, once per device
     await waitFor(() => expect(share).toHaveBeenCalled());
     expect(share.mock.calls[0]![0]).toEqual({ message: expect.stringMatching(/^Joe is here \(\d{1,2}:\d{2} [AP]M\): https:\/\/www\.openstreetmap\.org\/\?mlat=35\.69510&mlon=139\.70060#map=17\/35\.69510\/139\.70060$/) });
     expect(await screen.findByText("Shared with Chris, Sarah.")).toBeOnTheScreen();
