@@ -205,9 +205,15 @@ export function splitPrice(line: string): { label: string; price: number | null 
 
 /** Translate every OCR line, keeping prices as numbers so Split can reuse them. */
 export async function translateLines(lines: OcrLine[], from: string, to: string, provider: TranslationProvider, opts?: { signal?: AbortSignal }): Promise<CameraLine[]> {
-  return Promise.all(lines.map(async (l) => {
-    const { label, price } = splitPrice(l.text);
-    const t = label ? await provider.translate(label, from, to, opts) : { text: "" };
-    return { original: l.text, translated: t.text, price, confidence: l.confidence, box: l.box ?? null };
-  }));
+  const split = lines.map((l) => ({ line: l, ...splitPrice(l.text) }));
+  const labels = split.filter((s) => s.label).map((s) => s.label);
+  // One request for the whole photo when the provider can batch (DeepL, the relay); else one per line.
+  const translated = provider.translateMany && labels.length
+    ? await provider.translateMany(labels, from, to, opts)
+    : await Promise.all(labels.map((label) => provider.translate(label, from, to, opts)));
+  let next = 0;
+  return split.map(({ line, label, price }) => {
+    const t = label ? translated[next++]! : { text: "" };
+    return { original: line.text, translated: t.text, price, confidence: line.confidence, box: line.box ?? null };
+  });
 }

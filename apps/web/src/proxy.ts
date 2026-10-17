@@ -2,7 +2,8 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createProxyClient } from "@/lib/supabase/proxy";
 import { DEMO_COOKIE, isDemo, publicEnv } from "@/lib/env";
 
-const PUBLIC_PATHS = ["/welcome", "/login", "/signup", "/reset", "/welcome-back", "/auth", "/legal", "/api/health", "/s", "/join", "/gift"];
+// "/api/v1" is the mobile relay: it carries no cookies and checks a Bearer token itself (lib/bearer.ts).
+const PUBLIC_PATHS = ["/welcome", "/login", "/signup", "/reset", "/welcome-back", "/auth", "/legal", "/api/health", "/api/v1", "/s", "/join", "/gift"];
 const isPublic = (p: string) => p === "/" || PUBLIC_PATHS.some((x) => p === x || p.startsWith(`${x}/`));
 
 function buildCsp(nonce: string): string {

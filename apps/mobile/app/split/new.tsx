@@ -66,7 +66,7 @@ export default function ScanReceiptScreen() {
     try {
       const perm = camera ? await ImagePicker.requestCameraPermissionsAsync() : await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!perm.granted) { setStatus({ error: camera ? "Camera permission was denied. Allow it in Settings to scan receipts." : "Photo access was denied. Allow it in Settings to choose a photo." }); announce("Permission denied."); return; }
-      const res = camera ? await ImagePicker.launchCameraAsync({ mediaTypes: ["images"], quality: 0.8 }) : await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], quality: 0.8 });
+      const res = camera ? await ImagePicker.launchCameraAsync({ mediaTypes: ["images"], quality: 0.6 }) : await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], quality: 0.6 });
       const asset = res.canceled ? null : res.assets?.[0];
       if (!asset) return;
       if (asset.fileSize && asset.fileSize > 8 * 1024 * 1024) { setStatus({ error: "Photos up to 8 MB, please." }); return; }

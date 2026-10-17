@@ -27,6 +27,8 @@ export interface Translation {
 }
 export interface TranslationProvider {
   translate(text: string, from: string, to: string, opts?: { signal?: AbortSignal }): Promise<Translation>;
+  /** Optional batch call (one request for a whole menu); callers fall back to `translate` per text. */
+  translateMany?(texts: string[], from: string, to: string, opts?: { signal?: AbortSignal }): Promise<Translation[]>;
 }
 
 export interface FxRate { base: string; quote: string; rate: number; asOf: string }

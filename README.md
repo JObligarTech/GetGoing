@@ -58,7 +58,9 @@ This repo implements the [Claude Design](https://claude.ai/design) handoff (gree
 - **Offline & error states** (mockup 6b) — "You're offline · showing Japan 2027 saved 41 min ago" above every page; Home's "Available offline" card (saved places, map and routes, the rate from 41 min ago, text translation, and what needs internet); Translate keeps working offline with the on-device phrasebook while voice, camera and receipt scan say so; Directions offer "Show address in 日本語" for a taxi when the connection is slow; a stale rate is dashed-underlined; "Couldn't sync your trips" and "Atlas Premium Pass ended" states; error boundaries that keep the device usable.
 - **Demo accounts** — `joe@example.com` (yearly pass) and `chris@example.com` (no pass, the gift recipient); Sarah holds her own pass. Password `VoyaDemo-2027!` for both. Local seed only.
 
-Next: release engineering (a real Supabase project, web deploy, EAS builds, CI, the billing adapter) and the rename to Get Going.
+**Real services** — translation runs on DeepL and photo reading (Camera, Split receipts) on Google Cloud Vision, both server-side; the mobile app reaches them through an authenticated relay (`/api/v1/translate`, `/api/v1/ocr`) so no key ships in the app. Rates (Frankfurter), place search (Nominatim) and walk / cycle / drive directions (OSRM) are live on any real deployment. Demo mode and every test suite stay on the offline mocks. `GET /api/health` reports which adapter each service uses. Setup: **[docs/SETUP.md](docs/SETUP.md)**.
+
+Next: adding places and stays to a trip (place search is ready in `packages/core` but no screen uses it yet — without it a new account's trips stay empty), then release engineering (web deploy, EAS builds, CI, the billing adapter).
 
 ## Run it
 
@@ -74,16 +76,18 @@ pnpm dev:mobile         # scan the QR code with Expo Go
 
 ### Connect Supabase
 
+Full walkthrough, including DeepL and Google Vision keys: [docs/SETUP.md](docs/SETUP.md).
+
 1. Create a project at supabase.com, then: `supabase link --project-ref <ref> && supabase db push` (applies `supabase/migrations`).
-2. Copy `.env.example` → `apps/web/.env.local` and `apps/mobile/.env`, fill in the project URL and **anon** key. Remove `VOYA_DEMO=1`.
-3. Optional: enable Apple/Google sign-in in `supabase/config.toml` / the dashboard, and set `GEOCODE_PROVIDER=nominatim`, `FX_PROVIDER=frankfurter` for live (keyless) data.
+2. Copy `.env.example` → `apps/web/.env.local` and `apps/mobile/.env`, fill in the project URL and **anon** key. In `apps/web/.env.local` also set `VOYA_DEMO=0`, since `.env.development` turns demo mode on for `next dev`.
+3. Optional: enable Apple/Google sign-in in `supabase/config.toml` / the dashboard. Rates, place search and directions go live automatically; add `DEEPL_API_KEY` and `GOOGLE_VISION_API_KEY` to the web app for translation and photo reading.
 
 The service-role key is never used by either app; the web app refuses to start if it finds one in its environment. RLS is the security boundary.
 
 ## Verify
 
 ```bash
-pnpm test                          # tokens contrast (15) + core (103) + web components (9, axe) + mobile (41, RNTL)
+pnpm test                          # tokens contrast (15) + core (117) + web components (9, axe) + mobile (41, RNTL)
 pnpm --filter @voya/core test:db   # migrations + seed + RLS scenarios (21) on a throwaway Postgres 16
 pnpm test:e2e                      # Playwright: 312 tests across iPhone/Android/iPad/desktop × light/dark
 pnpm typecheck && pnpm lint
@@ -98,7 +102,7 @@ The e2e suite runs against a production build in demo mode. Every screen is chec
 - **Dates:** 2027-03-15 is a Monday; the mockup's "Sat, Mar 15" was illustrative.
 - **Motion:** 3% press scale, 220 ms fades, 40 ms list stagger — all disabled under "Reduce motion".
 - **Demo mode:** in-memory data isolated per browser session; refused on production deployments (`VERCEL_ENV`/`VOYA_ENV=production`).
-- **Speech and camera:** the browser's own Web Speech API and `<input capture>` on web, `expo-speech` / `expo-image-picker` on mobile. Expo Go has no speech recognition module, so the mobile mic explains that and both sides of Conversation can type. Translation and OCR run through server actions on web (keys never reach the browser) and stay on the offline mocks on mobile until a server relay exists.
+- **Speech and camera:** the browser's own Web Speech API and `<input capture>` on web, `expo-speech` / `expo-image-picker` on mobile. Expo Go has no speech recognition module, so the mobile mic explains that and both sides of Conversation can type. Translation and OCR run through server actions on web and through the `/api/v1` relay on mobile, so keys never reach a browser or the app bundle.
 - **Inserts mint their own ids:** creating a trip or route never uses `RETURNING` — the row's select policy depends on a membership the after-insert trigger creates, so reading it back in the same statement would be refused by RLS.
 
 ## Layout

@@ -1,16 +1,29 @@
-import { createFrankfurterFx, createFxCache, mockFx, mockOcr, mockTranslation, type FxRate } from "@voya/core";
-import { prefs } from "./supabase";
+import { createFrankfurterFx, createFxCache, createRelayProviders, mockFx, mockOcr, mockTranslation, type FxRate, type OcrProvider, type TranslationProvider } from "@voya/core";
+import { getSupabase, isDemo, prefs } from "./supabase";
 
 /**
- * Translation, OCR and FX on the device. Keyed providers must never ship in the app
- * bundle, so translation and OCR stay on the deterministic mocks here until a server
- * relay exists (the web app already routes them through server actions). Frankfurter
- * is keyless, so FX can go live with EXPO_PUBLIC_FX_PROVIDER=frankfurter.
+ * Translation, OCR and FX on the device.
+ *
+ * Keyed providers must never ship in the app bundle, so translation (DeepL) and photo reading
+ * (Google Vision) go through the web server's relay (/api/v1/translate, /api/v1/ocr) with the
+ * user's Supabase access token. Demo mode (no Supabase configured) and Expo Go previews keep the
+ * deterministic on-device mocks. Frankfurter is keyless, so a real build calls it directly.
  */
-export const translation = mockTranslation;
-export const ocr = mockOcr;
+const SITE_URL = process.env.EXPO_PUBLIC_SITE_URL ?? "";
+const useRelay = !isDemo && /^https?:\/\//.test(SITE_URL);
 
-const fxProvider = process.env.EXPO_PUBLIC_FX_PROVIDER === "frankfurter" ? createFrankfurterFx() : mockFx;
+async function accessToken(): Promise<string | null> {
+  const { data } = await (await getSupabase()).auth.getSession();
+  return data.session?.access_token ?? null;
+}
+
+const relay = useRelay ? createRelayProviders({ baseUrl: SITE_URL, getAccessToken: accessToken }) : null;
+
+export const translation: TranslationProvider = relay?.translation ?? mockTranslation;
+export const ocr: OcrProvider = relay?.ocr ?? mockOcr;
+
+const fxName = process.env.EXPO_PUBLIC_FX_PROVIDER || (isDemo ? "mock" : "frankfurter");
+const fxProvider = fxName === "frankfurter" ? createFrankfurterFx() : mockFx;
 /** Rates are cached in memory for an hour and persisted per pair so the converter works offline. */
 export const fx = createFxCache(fxProvider, {
   ttlMs: 60 * 60 * 1000,

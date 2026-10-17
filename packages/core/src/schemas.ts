@@ -154,6 +154,20 @@ const langCode = z.string().regex(/^[a-z]{2,3}(-[A-Za-z]{2,4})?$/, "Use a langua
 /** One translation request; the text limit matches the textarea counter. */
 export const translateSchema = z.object({ text: text(500), from: langCode, to: langCode });
 export type TranslateInput = z.infer<typeof translateSchema>;
+/**
+ * The mobile relay (POST /api/v1/translate): up to 60 texts per call (a menu photo), each with the
+ * same 500-character limit as the textarea, and a cap on the whole batch.
+ */
+export const relayTranslateSchema = z.object({ texts: z.array(text(500)).min(1).max(60), from: langCode, to: langCode })
+  .refine((v) => v.texts.reduce((n, t) => n + t.length, 0) <= 6000, "Too much text in one request.");
+export type RelayTranslateInput = z.infer<typeof relayTranslateSchema>;
+/** The mobile relay (POST /api/v1/ocr): one photo as base64 (8 MB of bytes ≈ 11.2 MB of base64). */
+export const relayOcrSchema = z.object({
+  image: z.string().min(1).max(11_200_000),
+  languageHints: z.array(langCode).max(3).default([]),
+  document: z.enum(["menu", "receipt"]).optional(),
+});
+export type RelayOcrInput = z.infer<typeof relayOcrSchema>;
 /** A saved phrase on a trip. */
 export const phraseSchema = z.object({
   tripId: z.uuid(),
